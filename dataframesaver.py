@@ -30,4 +30,5 @@ def cleanup_df(df) -> pd.DataFrame:
     df = df[df['Categories'].notna()]
     df = df[df['Publishers'].notna()]
     df = df.dropna(axis=1)
+    df.to_csv('game_market_data.csv', index=False)
     return df
