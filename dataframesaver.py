@@ -1,18 +1,25 @@
 import pandas as pd
+from pandas.core.interchange import column
 
 
 class DataFrameSaver:
-    def __init__(self, filename:str):
-        df = pd.read_csv(filename)
-        self.__raw_df = cleanup_df(df)
+    def __init__(self, filename: str):
+        self.__raw_df = pd.read_csv(filename)
+
         self.df = self.__raw_df.copy()
         self.__saved_df = {}
 
-    def save_df(self, name:str):
+    def to_datetime(self):
+        self.df['Release date'] = self.df['Release date'].apply(lambda x: to_datetime(x))
+
+    def to_list(self, col: str):
+        self.df[col] = self.df.apply(lambda x: x[col].split(','), axis=1)
+
+    def save_df(self, name: str):
         """ Saves actives dataframe into a dict"""
         self.__saved_df[name] = self.df.copy()
 
-    def load_df(self, name:str):
+    def load_df(self, name: str):
         """ Loads dataframe from saved dict by name"""
         if name in self.__saved_df:
             self.df = self.__saved_df[name].copy()
@@ -24,11 +31,10 @@ class DataFrameSaver:
         self.df = self.__raw_df.copy()
 
 
-def cleanup_df(df) -> pd.DataFrame:
-    """ handle missing data from input dataframe """
-    df = df[df['Genres'].notna()]
-    df = df[df['Categories'].notna()]
-    df = df[df['Publishers'].notna()]
-    df = df.dropna(axis=1)
-    df.to_csv('game_market_data.csv', index=False)
-    return df
+def to_datetime(date_str):
+        try:
+            date_str = pd.to_datetime(date_str, format="%b %d, %Y")
+        except ValueError:
+            pass
+        date_obj = pd.to_datetime(date_str, format="%b %Y")
+        return date_obj
