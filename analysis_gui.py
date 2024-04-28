@@ -1,15 +1,16 @@
+""" GUI module for analysis application"""
+
 import tkinter as tk
 from tkinter import ttk
 
-import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-
-from analysis_controller import AnalysisController
 import matplotlib.pyplot as plt
+from analysis_controller import AnalysisController
 
 
 class AnalysisGUI(tk.Tk):
+    """ GUI class for analysis application"""
     def __init__(self):
         super().__init__()
         # Controller
@@ -40,7 +41,7 @@ class AnalysisGUI(tk.Tk):
         # TODO Handle long running task
         """ Initialise the information page component"""
         root = self.pages['Information']
-        descriptive_frame = tk.LabelFrame(root, text='Descriptive Statistic')
+        descriptive_frame = tk.LabelFrame(root, text='Descriptive Statistic', font='32')
 
         # Distribution of Games Price (histogram)
         price_fig = self.plot_histogram(self.analysis.get_df(), 'Price',
@@ -102,7 +103,6 @@ class AnalysisGUI(tk.Tk):
         descriptive_frame.columnconfigure(0, weight=1)
         descriptive_frame.columnconfigure(1, weight=1)
         descriptive_frame.rowconfigure(0, weight=1)
-
 
         root.columnconfigure(0, weight=1)
         root.rowconfigure(0, weight=1)
@@ -180,8 +180,7 @@ class AnalysisGUI(tk.Tk):
             """ Combine the values that below 5% of total to "Others"""
             if x['Name'] < 0.015 * n_df['Name'].sum():
                 return 'Other'
-            else:
-                return str(x[x_column])
+            return str(x[x_column])
 
         n_df[x_column] = n_df.apply(assign_others, axis=1)
         n_df = n_df.groupby(n_df[x_column]).sum()
@@ -192,7 +191,7 @@ class AnalysisGUI(tk.Tk):
 
     def get_descriptive_statistic(self, root, col: str) -> tk.LabelFrame:
         """ Create a label frame of the descriptive statistics """
-        desc = tk.LabelFrame(root, text=col)
+        desc = tk.LabelFrame(root, text=col, font="22")
         df = self.analysis.get_df()
         range_l = tk.Label(desc, text=f"Range: {df[col].min():.2f} - "
                                       f"{df[col].max():.2f}"
@@ -228,4 +227,5 @@ class AnalysisGUI(tk.Tk):
         return desc
 
     def run(self):
+        """ Run the application GUI"""
         self.mainloop()

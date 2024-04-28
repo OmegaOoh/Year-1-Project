@@ -1,7 +1,11 @@
+""" Analysis Controller Module for Analysis Application"""
+
 from pandas import DataFrame
 from analysis_model import Analysis
 
+
 class AnalysisController:
+    """ Controller for analysis application"""
     def __init__(self):
         self.__model = Analysis()
 
@@ -18,6 +22,7 @@ class AnalysisController:
         self.__model.df.save_df(name)
 
     def load_df(self, name: str):
+        """ load specific dataframe to use"""
         self.__model.df.load_df(name)
 
     def to_datetime(self) -> None:
