@@ -70,9 +70,11 @@ class AnalysisGUI(tk.Tk):
         self.analysis.filter('Negative', '!= 0')
         self.analysis.apply('Rating', lambda x: x['Positive'] / (x['Positive'] + x['Negative']) * 100,
                             axis=1)
+        corr = self.analysis.get_correlation('Price', 'Rating')
         temp_df = self.analysis.get_df()
         scatter_fig = self.plot_scatter(temp_df, "Price", "Rating"
-                                        , "Price", "Rating", "Scatter of Price and Rating")
+                                        , "Price", "Rating", f"Scatter of Price and Rating \n"
+                                                             f"Correlation: {corr:.5f}")
         scatter_cv = FigureCanvasTkAgg(scatter_fig, root)
         scatter_cv.draw()
         scatter_cv.get_tk_widget().grid(sticky=tk.NSEW, column=2, row=0)
@@ -124,14 +126,24 @@ class AnalysisGUI(tk.Tk):
 
     @staticmethod
     def plot_histogram(df, x_column: str, x_label: str, y_label: str,
-                       title: str = 'Histogram') -> Figure:
+                       title: str = 'Histogram', bins: int = 25) -> Figure:
         """ Plot the histogram of the data """
         fig, ax = plt.subplots(figsize=(10, 6))
-        plt.hist(df[x_column], bins=20, label=x_label)
         ax.set_title(title)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
-        ax.set_xbound(0)
+        # Remove using SD
+        data = df[x_column]
+        sd = data.std()
+        upper_bound = data.mean() + 3*sd
+        if data.max() < upper_bound:
+            upper_bound = data.max()
+        lower_bound = data.mean() - 3*sd
+        if data.min() > lower_bound:
+            lower_bound = data.min()
+        # plot a graph
+        bar_num = (upper_bound - lower_bound) / 2
+        plt.hist(df[x_column], bins=bar_num.__ceil__(), range=(lower_bound, upper_bound))
         return fig
 
     @staticmethod

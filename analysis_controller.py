@@ -30,22 +30,44 @@ class AnalysisController:
         self.__model.df.to_datetime()
 
     def count_time(self, interval: str = 'YE') -> DataFrame:
-        """ Counts number of occurrences between time interval (Need to convert to datetime format first) """
+        """ Counts number of occurrences between time interval (Need to convert to datetime format first)
+        :params str interval: time interval (datetime interval)
+        :params str column: column to get count from
+        :return DataFrame: dataframe of counted value grouped by time interval
+        """
         return self.__model.to_timeseries_count(interval)
 
     def mean_time(self, interval: str = 'YE', column: str = 'Price') -> DataFrame:
-        """ Counts number of occurrences between time interval (Need to convert to datetime format first) """
+        """ Counts number of occurrences between time interval (Need to convert to datetime format first)
+        :params str interval: time interval (datetime interval)
+        :params str column: column to get mean from
+        :return DataFrame: dataframe of mean value grouped by time interval
+        """
         return self.__model.to_timeseries_mean(interval, column)
 
     def apply(self, target_column: str, function, axis=0) ->None:
-        """ Apply the given function to the source column and apply the result to target columns"""
+        """ Apply the given function to the source column and apply the result to target columns
+        :params target_column: name of the to save the results to
+        :params function: function to be applies
+        """
         self.__model.apply(target_column, function, axis)
 
     def filter(self, column: str, expression: str) -> None:
         """ Filter values in column based on given expression
-            Example of expression: '>= 0', '< 1' """
+            Example of expression: '>= 0', '< 1'
+        :params target_column: column name that need to be filter
+        :params expression: expression string for filtering
+        """
         self.__model.filter(column, expression)
 
     def to_list(self, column: str):
         """ Converts data in specified columns to list of strings """
         self.__model.df.to_list(column)
+
+    def get_correlation(self, x:str, y:str):
+        """ Calculates the correlation with the given x and y column
+        :params x : columns name x
+        :params y : columns name y
+        :return : correlation coefficient
+        """
+        return self.__model.get_correlation(x, y)

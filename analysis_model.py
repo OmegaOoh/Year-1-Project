@@ -38,3 +38,9 @@ class Analysis:
         df = self.df.df
         df = df[eval(f"df['{column}'] {expression}")]
         self.df.df = df
+
+    def get_correlation(self, x, y) -> float:
+        """ Calculate the correlation between 2 columns in dataframe"""
+        return self.df.df[x].corr(self.df.df[y])
+
+
