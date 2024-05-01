@@ -5,7 +5,7 @@ from pandas.core.interchange import column
 class DataFrameSaver:
     def __init__(self, filename: str):
         self.__raw_df = pd.read_csv(filename)
-
+        self.__raw_df['AppID'] = self.__raw_df['AppID'].astype(str)
         self.df = self.__raw_df.copy()
         self.__saved_df = {}
 
@@ -30,11 +30,14 @@ class DataFrameSaver:
         """ Resets active dataframe to raw data"""
         self.df = self.__raw_df.copy()
 
+    def get_raw(self) -> pd.DataFrame:
+        """ Get raw data of the dataset"""
+        return self.__raw_df
 
 def to_datetime(date_str):
-        try:
-            date_str = pd.to_datetime(date_str, format="%b %d, %Y")
-        except ValueError:
-            pass
-        date_obj = pd.to_datetime(date_str, format="%b %Y")
-        return date_obj
+    try:
+        date_str = pd.to_datetime(date_str, format="%b %d, %Y")
+    except ValueError:
+        pass
+    date_obj = pd.to_datetime(date_str, format="%b %Y")
+    return date_obj

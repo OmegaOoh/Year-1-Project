@@ -1,6 +1,9 @@
 """ Analysis model for all most operation in GUI application"""
 
 import pandas as pd
+from PIL import Image
+import requests
+from io import BytesIO
 from dataframesaver import DataFrameSaver as Ds
 
 
@@ -39,8 +42,21 @@ class Analysis:
         df = df[eval(f"df['{column}'] {expression}")]
         self.df.df = df
 
+    def search(self, query) -> pd.DataFrame:
+        """ Search dataframe based on given query (AppID and Name column) and return dataframe"""
+        df = self.df.get_raw().copy()
+        result = df[df['AppID'].str.contains(query) | df['Name'].str.contains(query)]
+        return result
+
     def get_correlation(self, x, y) -> float:
         """ Calculate the correlation between 2 columns in dataframe"""
         return self.df.df[x].corr(self.df.df[y])
+
+    def get_image(self, name: str) -> Image:
+        df = self.df.get_raw().copy()
+        url = df[(df['Name'] == name)]['Header image'].values[0]
+        print(url)
+        response = requests.get(url)
+        return Image.open(BytesIO(response.content))
 
 

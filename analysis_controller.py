@@ -1,5 +1,5 @@
 """ Analysis Controller Module for Analysis Application"""
-
+import pandas as pd
 from pandas import DataFrame
 from analysis_model import Analysis
 
@@ -12,6 +12,9 @@ class AnalysisController:
     def get_df(self) -> DataFrame:
         """ Return copy of dataframe"""
         return self.__model.df.df.copy()
+
+    def get_raw(self):
+        return self.__model.df.get_raw()
 
     def reset_df(self):
         """ Reset dataframe """
@@ -31,34 +34,40 @@ class AnalysisController:
 
     def count_time(self, interval: str = 'YE') -> DataFrame:
         """ Counts number of occurrences between time interval (Need to convert to datetime format first)
-        :params str interval: time interval (datetime interval)
-        :params str column: column to get count from
+        :param str interval: time interval (datetime interval)
         :return DataFrame: dataframe of counted value grouped by time interval
         """
         return self.__model.to_timeseries_count(interval)
 
     def mean_time(self, interval: str = 'YE', column: str = 'Price') -> DataFrame:
         """ Counts number of occurrences between time interval (Need to convert to datetime format first)
-        :params str interval: time interval (datetime interval)
-        :params str column: column to get mean from
+        :param str interval: time interval (datetime interval)
+        :param str column: column to get mean from
         :return DataFrame: dataframe of mean value grouped by time interval
         """
         return self.__model.to_timeseries_mean(interval, column)
 
     def apply(self, target_column: str, function, axis=0) ->None:
         """ Apply the given function to the source column and apply the result to target columns
-        :params target_column: name of the to save the results to
-        :params function: function to be applies
+        :param target_column: name of the to save the results to
+        :param axis: axis to apply the function to (0 for rows(default), 1 for columns)
+        :param function: function to be applies
         """
         self.__model.apply(target_column, function, axis)
 
     def filter(self, column: str, expression: str) -> None:
         """ Filter values in column based on given expression
             Example of expression: '>= 0', '< 1'
-        :params target_column: column name that need to be filter
-        :params expression: expression string for filtering
+        :param target_column: column name that need to be filter
+        :param expression: expression string for filtering
         """
         self.__model.filter(column, expression)
+
+    def search(self,query: str) -> pd.DataFrame:
+        """ Search the data inside entire dataframe, by query
+        :param query: the query to search (AppID, Name)
+        :return DataFrame: dataframe of search results"""
+        return self.__model.search(query)
 
     def to_list(self, column: str):
         """ Converts data in specified columns to list of strings """
@@ -66,8 +75,11 @@ class AnalysisController:
 
     def get_correlation(self, x:str, y:str):
         """ Calculates the correlation with the given x and y column
-        :params x : columns name x
-        :params y : columns name y
+        :param x : columns name x
+        :param y : columns name y
         :return : correlation coefficient
         """
         return self.__model.get_correlation(x, y)
+
+    def get_picture(self, name: str):
+        return self.__model.get_image(name)

@@ -2,7 +2,7 @@
 
 import tkinter as tk
 from tkinter import ttk
-
+from PIL import ImageTk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -24,6 +24,11 @@ class AnalysisGUI(tk.Tk):
         for i in page_name:
             temp = tk.Frame(self.notebook)
             self.pages[i] = temp
+
+        # Single Data Pages Variable
+        self.__query = tk.StringVar()
+        self.__table = None
+
         self.__init_component()
 
     def __init_component(self):
@@ -115,18 +120,93 @@ class AnalysisGUI(tk.Tk):
     def __init_explore(self):
         """ Initialise the explore page component"""
         root = self.pages['Explore']
-        t = tk.Label(root, text='Explore')
+        t = tk.Label(root, text='Explore (Not Implement yet')
         t.pack(fill=tk.BOTH, expand=True)
 
     def __init_single_data(self):
         """ Initialise the single data page component"""
         root = self.pages['Single Data']
-        t = tk.Label(root, text='Single Data')
-        t.pack(fill=tk.BOTH, expand=True)
+
+        # create table view
+        table_frame = tk.Frame(root)
+        self.__create_table_searchbar(table_frame)
+        table_frame.columnconfigure(0, weight=100)
+        table_frame.columnconfigure(1, weight=20)
+        table_frame.columnconfigure(2, weight=1)
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.rowconfigure(1, weight=500)
+
+        # create game detail frame
+        detail_frame = tk.Frame(root)
+        self.__create_detail(detail_frame)
+
+        # main layout management
+        detail_frame.grid(sticky=tk.NSEW, column=0, row=0)
+        table_frame.grid(sticky=tk.NSEW, column=1, row=0)
+        root.columnconfigure(0, weight=4)
+        root.columnconfigure(1, weight=1)
+        root.rowconfigure(0, weight=1)
+
+    def __create_detail(self, root):
+        """ Create the frame to display the game details """
+        # Using Ready or Not as Example. Object to be change
+        img = ImageTk.PhotoImage(self.analysis.get_picture('Ready or Not'))
+        pic_canvas = tk.Label(root, image=img)
+        pic_canvas.image = img
+        pic_canvas.grid(sticky=tk.NSEW, column=0, row=0, columnspan=3)
+        pic_canvas.columnconfigure(0, weight=1)
+        pic_canvas.columnconfigure(1, weight=1)
+        pic_canvas.columnconfigure(2, weight=1)
+
+    def __create_table_searchbar(self, root):
+        """ Create the search bar and table component that attach to root frame"""
+        scroll = tk.Scrollbar(root, orient='vertical')
+        self.__table = ttk.Treeview(root, yscrollcommand=scroll.set)
+        scroll.configure(command=self.__table.yview)
+        self.__table.column('#0', width=0, stretch=tk.NO)
+        self.__table.heading('#0', text='', anchor=tk.W)
+        self.__table['columns'] = ('AppID', "Name")
+        # Define Column
+        self.__table.column('AppID', anchor=tk.W, stretch=tk.NO)
+        self.__table.column('Name', anchor=tk.W)
+        # Define Heading
+        self.__table.heading('AppID', text='AppID', anchor=tk.CENTER)
+        self.__table.heading('Name', text='Name', anchor=tk.CENTER)
+        self.load_table(self.analysis.get_raw())
+
+        # implement search bar
+        search_bar = tk.Entry(root, textvariable=self.__query)
+        search_bar.bind('<Return>', lambda x: self.handle_search())
+        search_button = tk.Button(root, text='Search', font='16', command=self.handle_search)
+
+        # Table and Search bar layout management
+        search_bar.grid(sticky=tk.NSEW, column=0, row=0)
+        search_button.grid(sticky=tk.NSEW, column=1, row=0, columnspan=2)
+        scroll.grid(sticky=tk.NSEW, column=2, row=1)
+        self.__table.grid(sticky=tk.NSEW, column=0, row=1, columnspan=2)
+
+    def handle_search(self):
+        # TODO Long Running Task
+        query = self.__query.get()
+        self.clear_table()
+        if not query.isspace():
+            searched_df = self.analysis.search(query)
+            self.load_table(searched_df)
+
+    def load_table(self, dataframe):
+        # TODO Long Running Task
+        self.clear_table()
+        df = dataframe.copy()
+        df = df[['AppID', 'Name']]
+        for i, r in df.iterrows():
+            self.__table.insert("", 0, text=i, values=list(r))
+
+    def clear_table(self):
+        self.__table.delete(*self.__table.get_children())
 
     @staticmethod
     def plot_histogram(df, x_column: str, x_label: str, y_label: str,
-                       title: str = 'Histogram', bins: int = 25) -> Figure:
+                       title: str = 'Histogram', bins: int = None) -> Figure:
         """ Plot the histogram of the data """
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.set_title(title)
@@ -142,8 +222,9 @@ class AnalysisGUI(tk.Tk):
         if data.min() > lower_bound:
             lower_bound = data.min()
         # plot a graph
-        bar_num = (upper_bound - lower_bound) / 2
-        plt.hist(df[x_column], bins=bar_num.__ceil__(), range=(lower_bound, upper_bound))
+        if not bins:
+            bins = (upper_bound - lower_bound) / 2
+        plt.hist(df[x_column], bins=bins.__ceil__(), range=(lower_bound, upper_bound))
         return fig
 
     @staticmethod
