@@ -55,8 +55,17 @@ class Analysis:
     def get_image(self, name: str) -> Image:
         df = self.df.get_raw().copy()
         url = df[(df['Name'] == name)]['Header image'].values[0]
-        print(url)
         response = requests.get(url)
         return Image.open(BytesIO(response.content))
 
+    def get_specific(self, name: str) -> pd.DataFrame:
+        df = self.df.get_raw().copy()
+        df = df.loc[df['Name'] == name]
+        return df
 
+    def get_saved_name(self) -> list:
+        return self.df.get_all_name()
+
+    def add_to_dataframe(self, content: (pd.Series, pd.DataFrame),name: str) -> None:
+        """ Add specified content to named dataframe """
+        self.df.add_to_saved_df(content, name)

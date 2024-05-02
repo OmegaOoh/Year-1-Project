@@ -83,3 +83,18 @@ class AnalysisController:
 
     def get_picture(self, name: str):
         return self.__model.get_image(name)
+
+    def get_specific(self, name: str) -> pd.DataFrame:
+        """ return dictionary contains specific information about the given game
+        :param name: the name of video game
+        :return : Dataframe containing 1 specific game information"""
+        return self.__model.get_specific(name)
+
+    def get_dataframes_name(self):
+        return self.__model.get_saved_name()
+
+    def add_to_dataframe(self, content: (pd.Series, pd.DataFrame), name: str) -> None:
+        """ Add content to saved dataframe
+        :param content: data to add into dataframe
+        :param name: name of the dataframe to save to"""
+        self.__model.add_to_dataframe(content, name)

@@ -1,7 +1,7 @@
 """ GUI module for analysis application"""
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, font
 from PIL import ImageTk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -25,14 +25,18 @@ class AnalysisGUI(tk.Tk):
             temp = tk.Frame(self.notebook)
             self.pages[i] = temp
 
+
         # Single Data Pages Variable
         self.__query = tk.StringVar()
         self.__table = None
+        self.__detail_comp = {}
 
         self.__init_component()
 
     def __init_component(self):
         """ initialize tkinter component"""
+        self.defaultFont = font.nametofont('TkDefaultFont')
+        self.defaultFont.configure(size=12)
         self.__init_information()
         self.__init_explore()
         self.__init_single_data()
@@ -120,7 +124,7 @@ class AnalysisGUI(tk.Tk):
     def __init_explore(self):
         """ Initialise the explore page component"""
         root = self.pages['Explore']
-        t = tk.Label(root, text='Explore (Not Implement yet')
+        t = tk.Label(root, text='Explore (Not Implement yet)')
         t.pack(fill=tk.BOTH, expand=True)
 
     def __init_single_data(self):
@@ -135,13 +139,13 @@ class AnalysisGUI(tk.Tk):
         table_frame.columnconfigure(2, weight=1)
         table_frame.rowconfigure(0, weight=1)
         table_frame.rowconfigure(1, weight=500)
-
         # create game detail frame
         detail_frame = tk.Frame(root)
         self.__create_detail(detail_frame)
-
+        self.__table.bind('<<TreeviewSelect>>', self.handle_select_game)
         # main layout management
         detail_frame.grid(sticky=tk.NSEW, column=0, row=0)
+        self.__detail_comp['detail frame'] = detail_frame
         table_frame.grid(sticky=tk.NSEW, column=1, row=0)
         root.columnconfigure(0, weight=4)
         root.columnconfigure(1, weight=1)
@@ -149,14 +153,83 @@ class AnalysisGUI(tk.Tk):
 
     def __create_detail(self, root):
         """ Create the frame to display the game details """
-        # Using Ready or Not as Example. Object to be change
-        img = ImageTk.PhotoImage(self.analysis.get_picture('Ready or Not'))
-        pic_canvas = tk.Label(root, image=img)
-        pic_canvas.image = img
-        pic_canvas.grid(sticky=tk.NSEW, column=0, row=0, columnspan=3)
-        pic_canvas.columnconfigure(0, weight=1)
-        pic_canvas.columnconfigure(1, weight=1)
-        pic_canvas.columnconfigure(2, weight=1)
+        picture_frame = tk.Frame(root)
+        pic_label = tk.Label(picture_frame)
+        pic_label.pack(side=tk.LEFT, padx=5, pady=5, expand=True, fill=tk.BOTH)
+        self.__detail_comp['picture'] = pic_label
+
+        picture_frame.bind('<Configure>', lambda x: self.resize_image(pic_label, x))
+
+        # Text element
+        title_label = tk.Label(root, text="Title :")
+        title = tk.Label(root, font=16)
+        self.__detail_comp['game title'] = title
+
+        price_label = tk.Label(root, text="Price :")
+        price = tk.Label(root, font=16)
+        self.__detail_comp['price'] = price
+
+        publisher_label = tk.Label(root, text="Publishers :")
+        pub = tk.Label(root, font=16)
+        self.__detail_comp['publisher'] = pub
+
+        genres_label = tk.Label(root, text="Genres :")
+        genres = tk.Label(root, font=16)
+        self.__detail_comp['genre'] = genres
+
+        peak_ccu_label = tk.Label(root, text="Peak CCU: ")
+        peak_ccu = tk.Label(root, font=16)
+        self.__detail_comp['peakCCU'] = peak_ccu
+
+        average_playtime_label = tk.Label(root, text="Average Playtime")
+        avg_playtime = tk.Label(root, font=16)
+        self.__detail_comp['playtime'] = avg_playtime
+
+        positive_label = tk.Label(root, text="Positive: ")
+        pos = tk.Label(root)
+        self.__detail_comp['positive'] = pos
+
+        negative_label = tk.Label(root, text="Negative: ")
+        neg = tk.Label(root)
+        self.__detail_comp['negative'] = neg
+
+        add_to_label = tk.Label(root, text="Add to :", font = 16)
+        add_combobox = ttk.Combobox(root)
+        self.__detail_comp['combobox'] = add_combobox
+        add_button = tk.Button(root, text="Add")
+        self.__detail_comp['button'] = add_button
+
+        add_button['state'] = tk.DISABLED
+        add_button.bind("<Button-1>", self.handle_adds_button)
+        add_combobox['state'] = tk.DISABLED
+
+        picture_frame.grid(sticky=tk.NSEW, row=0, column=0, columnspan=2, rowspan=2)
+        title_label.grid(sticky=tk.NSEW, row=0, column=2)
+        title.grid(sticky=tk.NSEW, row=0, column=3)
+        price_label.grid(sticky=tk.NSEW, row=1, column=2)
+        price.grid(sticky=tk.NSEW, row=1, column=3)
+        publisher_label.grid(sticky=tk.NSEW, row=2, column=0)
+        pub.grid(sticky=tk.NSEW, row=2, column=1)
+        genres_label.grid(sticky=tk.NSEW, row=2, column=2)
+        genres.grid(sticky=tk.NSEW, row=2, column=3)
+        peak_ccu_label.grid(sticky=tk.NSEW, row=3, column=0)
+        peak_ccu.grid(sticky=tk.NSEW, row=3, column=1)
+        average_playtime_label.grid(sticky=tk.NSEW, row=3, column=2)
+        avg_playtime.grid(sticky=tk.NSEW, row=3, column=3)
+        positive_label.grid(sticky=tk.NSEW, row=4, column=0)
+        pos.grid(sticky=tk.NSEW, row=4, column=1)
+        negative_label.grid(sticky=tk.NSEW, row=4, column=2)
+        neg.grid(sticky=tk.NSEW, row=4, column=3)
+
+        add_to_label.grid(sticky=tk.W, row=5, column=0)
+        add_combobox.grid(sticky=tk.EW, row=6, column=1, columnspan=2)
+        add_button.grid(sticky=tk.EW, row=6, column=3)
+
+        for i in range(6):
+            root.rowconfigure(i, weight=5)
+        root.rowconfigure(6, weight=1)
+        for i in range(4):
+            root.columnconfigure(i, weight=1)
 
     def __create_table_searchbar(self, root):
         """ Create the search bar and table component that attach to root frame"""
@@ -184,6 +257,73 @@ class AnalysisGUI(tk.Tk):
         search_button.grid(sticky=tk.NSEW, column=1, row=0, columnspan=2)
         scroll.grid(sticky=tk.NSEW, column=2, row=1)
         self.__table.grid(sticky=tk.NSEW, column=0, row=1, columnspan=2)
+
+    def change_image(self, image_name: str, label: tk.Label) -> None:
+        self.__detail_comp['image'] = self.analysis.get_picture(image_name)
+        img = ImageTk.PhotoImage(self.__detail_comp['image'])
+        label.configure(image=img)
+        label.image = img
+
+    def resize_image(self, label: tk.Label, e: tk.Event) -> None:
+        """ Resize to image according to width and height of the frame (according to events)"""
+        try:
+            img = self.__detail_comp['image'].copy()
+        except KeyError:
+            return
+        img = img.copy()
+        shape = img.size
+        ratio = shape[0] / shape[1]
+        w = int(3*e.width/4) + 1
+        h = int(w / ratio) + 1
+        resized_image = ImageTk.PhotoImage(img.resize((w, h)))
+        label.configure(image=resized_image)
+        label.image = resized_image
+
+    def handle_select_game(self, *args):
+        self.__detail_comp['button']['state'] = tk.NORMAL
+        self.__detail_comp['combobox']['state'] = tk.NORMAL
+
+        item_loc = self.__table.focus()
+        item = self.__table.item(item_loc)
+        try:
+            item_name = item['values'][1]
+        except IndexError:
+            return
+        self.change_image(item_name, self.__detail_comp['picture'])
+        details = self.analysis.get_specific(item_name)
+
+        def get_detail(column: str) -> str:
+            return details[column].values[0]
+
+        self.__detail_comp['selected'] = item_name
+
+        self.__detail_comp['game title'].configure(text=get_detail('Name'))
+        self.__detail_comp['price'].configure(text=f'{get_detail('Price'):,.2f} USD')
+        self.__detail_comp['publisher'].configure(text=get_detail('Publishers'))
+        self.__detail_comp['genre'].configure(text=get_detail('Genres'))
+        self.__detail_comp['peakCCU'].configure(text=get_detail('Peak CCU'))
+        self.__detail_comp['playtime'].configure(text=f"{get_detail('Average playtime forever'):,}")
+        self.__detail_comp['positive'].configure(text=f"{get_detail('Positive'):,}")
+        self.__detail_comp['negative'].configure(text=f"{get_detail('Negative'):,}")
+
+        self.load_dataframe_name()
+
+    def handle_adds_button(self, *args):
+        df_name = str(self.__detail_comp['combobox'].get())
+        if df_name.isspace() or df_name == '':
+            df_name = 'untitled'
+        print('Name: ', df_name)
+        try:
+            item_name = self.__detail_comp['selected']
+            df = self.analysis.get_specific(item_name)
+            self.analysis.add_to_dataframe(df, df_name)
+        except KeyError:
+            return
+
+    def load_dataframe_name(self):
+        combobox = self.__detail_comp['combobox']
+        ls = self.analysis.get_dataframes_name()
+        combobox['values'] = ls
 
     def handle_search(self):
         # TODO Long Running Task

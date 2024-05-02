@@ -34,6 +34,22 @@ class DataFrameSaver:
         """ Get raw data of the dataset"""
         return self.__raw_df
 
+    def get_all_name(self) -> list:
+        """ Get all names of the dataset"""
+        return list(self.__saved_df.keys())
+
+    def add_to_saved_df(self, content: (pd.DataFrame, pd.Series), name: str):
+        """ Saves dataframe to saved"""
+        try:
+            df = self.__saved_df[name]
+            self.__saved_df[name] = pd.concat([df, content])
+            self.__saved_df[name].drop_duplicates(keep='first', inplace=True)
+        except KeyError:
+            self.__saved_df[name] = pd.DataFrame(content)
+        print(self.__saved_df[name])
+        print(self.__saved_df.keys())
+
+
 def to_datetime(date_str):
     try:
         date_str = pd.to_datetime(date_str, format="%b %d, %Y")
