@@ -6,7 +6,7 @@ class DataFrameSaver:
     def __init__(self, filename: str):
         self.__raw_df = pd.read_csv(filename)
         self.__raw_df['AppID'] = self.__raw_df['AppID'].astype(str)
-        self.df = self.__raw_df.copy()
+        self.df = self.__raw_df.copy(deep=True)
         self.__saved_df = {}
 
     def to_datetime(self):
@@ -28,7 +28,7 @@ class DataFrameSaver:
 
     def reset_df(self):
         """ Resets active dataframe to raw data"""
-        self.df = self.__raw_df.copy()
+        self.df = self.__raw_df.copy(deep=True)
 
     def get_raw(self) -> pd.DataFrame:
         """ Get raw data of the dataset"""
@@ -46,8 +46,6 @@ class DataFrameSaver:
             self.__saved_df[name].drop_duplicates(keep='first', inplace=True)
         except KeyError:
             self.__saved_df[name] = pd.DataFrame(content)
-        print(self.__saved_df[name])
-        print(self.__saved_df.keys())
 
 
 def to_datetime(date_str):

@@ -66,6 +66,13 @@ class Analysis:
     def get_saved_name(self) -> list:
         return self.df.get_all_name()
 
-    def add_to_dataframe(self, content: (pd.Series, pd.DataFrame),name: str) -> None:
+    def add_to_dataframe(self, content: (pd.Series, pd.DataFrame), name: str) -> None:
         """ Add specified content to named dataframe """
         self.df.add_to_saved_df(content, name)
+
+    def get_num_column(self):
+        return self.df.get_raw().select_dtypes(include='number').columns.to_list()
+
+    @staticmethod
+    def get_non_numeric_columns():
+        return ['Estimated owners', 'Windows', 'Mac', 'Linux', 'Genres']

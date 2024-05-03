@@ -1,22 +1,25 @@
 """ GUI module for analysis application"""
 
 import tkinter as tk
+import tkinter.messagebox
 from tkinter import ttk, font
 from PIL import ImageTk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+import threading
 from analysis_controller import AnalysisController
 
 
 class AnalysisGUI(tk.Tk):
     """ GUI class for analysis application"""
+
     def __init__(self):
         super().__init__()
         # Controller
         self.analysis = AnalysisController()
 
-        # GUI
+        # Main GUI
         self.title('Steam Game Market Analysis')
         self.notebook = ttk.Notebook(self)
         page_name = ['Information', 'Explore', 'Single Data']
@@ -25,6 +28,8 @@ class AnalysisGUI(tk.Tk):
             temp = tk.Frame(self.notebook)
             self.pages[i] = temp
 
+        # Explore Pages Variable
+        self.__explore_comp = {}
 
         # Single Data Pages Variable
         self.__query = tk.StringVar()
@@ -37,14 +42,22 @@ class AnalysisGUI(tk.Tk):
         """ initialize tkinter component"""
         self.defaultFont = font.nametofont('TkDefaultFont')
         self.defaultFont.configure(size=12)
-        self.__init_information()
         self.__init_explore()
         self.__init_single_data()
+        self.__init_information()
+
         for i in self.pages:
             page = self.pages[i]
             page.pack(fill=tk.BOTH, expand=True)
             self.notebook.add(page, text=i)
         self.notebook.pack(fill=tk.BOTH, expand=True)
+        self.notebook.bind('<<NotebookTabChanged>>', self.handle_tab_change)
+
+        menubar = tk.Menu(self)
+        self.config(menu=menubar)
+        file_menu = tk.Menu(menubar)
+        file_menu.add_command(label='Exit', command=self.exit)
+        menubar.add_cascade(label='File', menu=file_menu)
 
     def __init_information(self):
         # TODO Handle long running task
@@ -124,8 +137,254 @@ class AnalysisGUI(tk.Tk):
     def __init_explore(self):
         """ Initialise the explore page component"""
         root = self.pages['Explore']
-        t = tk.Label(root, text='Explore (Not Implement yet)')
-        t.pack(fill=tk.BOTH, expand=True)
+        filter_area = tk.LabelFrame(root, text="Filter")
+        dataframe_combobox = ttk.Combobox(filter_area)
+        self.load_dataframe_name(dataframe_combobox)
+        dataframe_combobox['values'] = ['full']
+        dataframe_combobox.current(0)
+        dataframe_combobox['state'] = 'readonly'
+        self.__explore_comp['df'] = dataframe_combobox
+        dataframe_combobox.grid(sticky=tk.EW, padx=5, pady=5, column=0, row=0)
+
+        filter_data = tk.LabelFrame(filter_area, text="Data filter Condition")
+        cond_cbb1 = ttk.Combobox(filter_data, state='readonly')
+        col_list = []
+        for i in self.analysis.get_filter_columns().values():
+            col_list += i
+        cond_cbb1['values'] = col_list
+        cond_cbb1.current(0)
+        cond_cbb2 = ttk.Combobox(filter_data, state='readonly')
+        cond_cbb2['values'] = ['<=', '>=', '<', '>', '==', '!=']  # initial condition
+        cond_cbb2.current(0)
+        cond_cbb3 = ttk.Combobox(filter_data, state=tk.NORMAL)
+        add_button = ttk.Button(filter_data, text="Add Filter")
+
+        tree_view = ttk.Treeview(filter_data)
+
+        tree_view.column('#0', width=0, stretch=tk.NO)
+        tree_view.heading('#0', text='', anchor=tk.W)
+
+        tree_view['columns'] = ('Data Column', "Condition", "Values")
+        tree_view.heading(column=0, text="Data Column")
+        tree_view.heading(column=1, text="Condition")
+        tree_view.heading(column=2, text="Values")
+
+        tree_view.column('Data Column', anchor=tk.W)
+        tree_view.column('Condition', anchor=tk.W)
+        tree_view.column('Values', anchor=tk.W)
+
+        def add_filter():
+            try:
+                data = cond_cbb1.get()
+                cond = cond_cbb2.get()
+                val = cond_cbb3.get()
+                temp = [data, cond, val]
+                tree_view.insert("", tk.END, values=temp)
+            except tkinter.TclError:
+                return
+
+        def remove_filter():
+            try:
+                tree_view.delete(tree_view.selection()[0])
+            except IndexError:
+                return
+
+        remove_filter_button = ttk.Button(filter_data, text="Remove Filter", command=lambda: remove_filter())
+
+        self.__explore_comp['condition1'] = cond_cbb2
+        self.__explore_comp['condition2'] = cond_cbb3
+        cond_cbb1.bind('<<ComboboxSelected>>', self.handle_filter_change)
+        add_button.bind("<Button-1>", lambda x: add_filter())
+
+        cond_cbb1.grid(sticky=tk.NSEW, padx=5, pady=5, column=0, row=0)
+        cond_cbb2.grid(sticky=tk.NSEW, padx=5, pady=5, column=1, row=0)
+        cond_cbb3.grid(sticky=tk.NSEW, padx=5, pady=5, column=2, row=0)
+        add_button.grid(sticky=tk.NSEW, padx=5, pady=5, column=2, row=1)
+        tree_view.grid(sticky=tk.NSEW, padx=5, pady=5, column=0, row=2, columnspan=3)
+        remove_filter_button.grid(sticky=tk.NSEW, padx=5, pady=5, column=2, row=3)
+
+        data_frame = ttk.LabelFrame(filter_area, text='Plot')
+
+        data1_label = ttk.Label(data_frame, text='X')
+        data1 = ttk.Combobox(data_frame, state='readonly')
+        self.__explore_comp['data1'] = data1
+        data2_label = ttk.Label(data_frame, text='Y')
+        data2 = ttk.Combobox(data_frame, state='readonly')
+        self.__explore_comp['data2'] = data2
+        graph_label = tk.Label(data_frame, text='Graph Type: ')
+        graph_type = ttk.Combobox(data_frame)
+        graph_type['values'] = ['Scatter', 'Histogram', 'Pie', 'Line']
+        graph_type.current(0)
+        graph_type.bind('<<ComboboxSelected>>', self.handle_change_graph_type)
+
+        def extract_tree():
+            ls = []
+            for line in tree_view.get_children():
+                t = ""
+                for value in tree_view.item(line)["values"]:
+                    t += str(value).replace(' ', '_') + ' '
+                t.strip()
+                ls.append(t)
+            return ls
+
+        visualize_button = ttk.Button(data_frame, text='Visualize',
+                                      command=lambda: self.handle_visualize(data1.get(),
+                                                                            data2.get(),
+                                                                            graph_type.get(),
+                                                                            extract_tree()))
+
+        data1_label.grid(sticky=tk.NSEW, padx=5, pady=5, column=0, row=0)
+        data1.grid(sticky=tk.NSEW, padx=5, pady=5, column=1, row=0)
+        data2_label.grid(sticky=tk.NSEW, padx=5, pady=5, column=2, row=0)
+        data2.grid(sticky=tk.NSEW, padx=5, pady=5, column=3, row=0)
+        graph_label.grid(sticky=tk.NSEW, padx=5, pady=5, column=0, row=1)
+        graph_type.grid(sticky=tk.NSEW, padx=5, pady=5, column=1, row=1)
+        visualize_button.grid(sticky=tk.NSEW, padx=5, pady=5, column=3, row=2)
+
+        data_frame.columnconfigure(0, weight=1)
+        data_frame.columnconfigure(1, weight=1)
+        data_frame.columnconfigure(2, weight=1)
+        data_frame.columnconfigure(3, weight=1)
+        data_frame.rowconfigure(0, weight=1)
+        data_frame.rowconfigure(1, weight=1)
+        data_frame.rowconfigure(2, weight=1)
+
+        for i in range(3):
+            filter_data.columnconfigure(i, weight=1)
+        filter_data.rowconfigure(2, weight=10)
+
+        filter_data.grid(sticky=tk.NSEW, padx=5, pady=5, column=0, row=1, columnspan=2)
+        data_frame.grid(sticky=tk.NSEW, padx=5, pady=5, column=0, row=2, columnspan=2)
+
+        filter_area.grid(sticky=tk.NSEW, padx=5, pady=5, column=1, row=0)
+
+        filter_area.rowconfigure(1, weight=10)
+        filter_area.rowconfigure(2, weight=1)
+        filter_area.columnconfigure(0, weight=1)
+        filter_area.columnconfigure(1, weight=5)
+
+        plot_area = tk.LabelFrame(root, text='Plot', padx=5, pady=5)
+
+        self.__explore_comp['plot'] = plot_area
+
+        plot_area.grid(sticky=tk.NSEW, row=0, column=0)
+        plot_area.columnconfigure(0, weight=1)
+        plot_area.rowconfigure(0, weight=1)
+
+        root.columnconfigure(0, weight=1)
+        root.columnconfigure(1, weight=1)
+        root.rowconfigure(0, weight=1)
+
+    def handle_change_graph_type(self, e: tk.Event) -> None:
+        selected = e.widget.get()
+        match selected:
+            case 'Histogram':
+                col_list = []
+                for i in self.analysis.get_filter_columns().values():
+                    col_list += i
+                self.__explore_comp['data1']['value'] = col_list
+                self.__explore_comp['data2']['state'] = tk.DISABLED
+
+            case "Scatter":
+                self.__explore_comp['data1']['value'] = self.analysis.get_num_column()
+                self.__explore_comp['data2']['state'] = 'readonly'
+                self.__explore_comp['data2']['value'] = self.analysis.get_num_column()
+                self.__explore_comp['data1']['value'] = self.analysis.get_num_column()
+                self.__explore_comp['data2'].current(0)
+            case "Pie":
+                self.__explore_comp['data1']['value'] = self.analysis.get_non_numeric_columns()
+                self.__explore_comp['data2']['state'] = tk.DISABLED
+            case "Line":
+                self.__explore_comp['data1']['value'] = ['count', 'average']
+                self.__explore_comp['data2']['value'] = self.analysis.get_num_column()
+                self.__explore_comp['data2']['state'] = 'readonly'
+                self.__explore_comp['data2'].current(0)
+        self.__explore_comp['data1'].current(0)
+
+    def handle_visualize(self, x: str = 'Price', y: str = 'Positive',
+                         graph_type: str = 'Histogram', filter_list: list = None):
+        if x == y:
+            tk.messagebox.showinfo("Invalid XY","X and Y must be different")
+            return
+        try:
+            fig = self.__explore_comp['figure']
+            fig.get_tk_widget().grid_forget()
+            del fig
+        except KeyError:
+            pass
+        try:
+            self.analysis.load_df(self.__explore_comp['df'].get())
+        except KeyError:
+            self.analysis.reset_df()
+        for i in filter_list:
+            i = i.split(' ')
+            self.analysis.filter(i[0].replace('_', ' '), i[1] + i[2])
+        match graph_type:
+            case 'Histogram':
+                plot = self.plot_histogram(self.analysis.get_df(), x, x, '')
+            case "Scatter":
+                plot = self.plot_scatter(self.analysis.get_df(), x, y, x, y)
+            case "Pie":
+                plot = self.plot_pie(self.analysis.get_df(), x)
+            case "Line":
+                x_col = 'Release Date'
+                if x == 'count':
+                    df = self.analysis.count_time()
+                    plot = self.plot_line(df, x_col, 'Name', x_col, y)
+                elif x == 'average':
+                    df = self.analysis.mean_time(y)
+                    plot = self.plot_line(df, x_col, y, x_col, y)
+
+        root = self.__explore_comp['plot']
+        figure = FigureCanvasTkAgg(plot, root)
+        figure.draw()
+        figure.get_tk_widget().grid(sticky=tk.NSEW, column=0, row=0)
+        self.__explore_comp['figure'] = figure
+
+    def handle_tab_change(self, event: tk.Event):
+        i = self.notebook.index(self.notebook.select())
+        if i == 1:
+            # Update dataframe combobox each time the user select the explore tabs
+            combobox = self.__explore_comp['df']
+            self.load_dataframe_name(combobox)
+            combobox['values'] = ['full'] + list(combobox['values'])
+
+    def handle_filter_change(self, event: tk.Event):
+        widget = event.widget
+        selected = widget.get()
+        full_dict = self.analysis.get_filter_columns()
+        cbb = self.__explore_comp['condition1']
+        cbb['values'] = []
+        if selected in full_dict['num']:
+            cbb = self.__explore_comp['condition1']
+            cbb['values'] = ['<=', '>=', '<', '>', '==', '!=']
+            cbb.current(0)
+            cbb = self.__explore_comp['condition2']
+            cbb['values'] = self.analysis.get_df()[selected].unique().tolist()
+            cbb['state'] = tk.NORMAL
+            cbb.current(0)
+        if selected in full_dict['other']:
+            cbb = self.__explore_comp['condition1']
+            cbb['values'] = ['is', 'have', 'is not', 'not have']
+            if selected == 'Genres':
+                cbb['values'] = ['is', 'is not']
+                cbb.current(0)
+                df = self.analysis.get_df()
+                genres = df.apply(lambda x: x['Genres'][0], axis=1)
+                cbb = self.__explore_comp['condition2']
+                cbb['values'] = genres.unique().tolist()
+                cbb.current(0)
+            else:
+                if selected == 'Publisher':
+                    cbb['values'] = ['is', 'is not']
+                cbb.current(0)
+                cbb = self.__explore_comp['condition2']
+                cbb['values'] = self.analysis.get_df()[selected].unique().tolist()
+            if selected != 'Primary Genres' or selected != 'Publisher':
+                cbb['state'] = 'readonly'
+            else:
+                cbb['state'] = tk.NORMAL
+                cbb.current(0)
 
     def __init_single_data(self):
         """ Initialise the single data page component"""
@@ -196,7 +455,7 @@ class AnalysisGUI(tk.Tk):
         add_to_label = tk.Label(root, text="Add to :", font = 16)
         add_combobox = ttk.Combobox(root)
         self.__detail_comp['combobox'] = add_combobox
-        add_button = tk.Button(root, text="Add")
+        add_button = ttk.Button(root, text="Add")
         self.__detail_comp['button'] = add_button
 
         add_button['state'] = tk.DISABLED
@@ -259,6 +518,7 @@ class AnalysisGUI(tk.Tk):
         self.__table.grid(sticky=tk.NSEW, column=0, row=1, columnspan=2)
 
     def change_image(self, image_name: str, label: tk.Label) -> None:
+        # TODO Handle Long Running Task
         self.__detail_comp['image'] = self.analysis.get_picture(image_name)
         img = ImageTk.PhotoImage(self.__detail_comp['image'])
         label.configure(image=img)
@@ -306,13 +566,13 @@ class AnalysisGUI(tk.Tk):
         self.__detail_comp['positive'].configure(text=f"{get_detail('Positive'):,}")
         self.__detail_comp['negative'].configure(text=f"{get_detail('Negative'):,}")
 
-        self.load_dataframe_name()
+        self.load_dataframe_name(self.__detail_comp['combobox'])
 
     def handle_adds_button(self, *args):
         df_name = str(self.__detail_comp['combobox'].get())
-        if df_name.isspace() or df_name == '':
+        if df_name.isspace() or df_name == '' or df_name == 'full':
+            tkinter.messagebox.showinfo('Warning', 'Dataframe name does not allowed, saved to untitled dataframe.')
             df_name = 'untitled'
-        print('Name: ', df_name)
         try:
             item_name = self.__detail_comp['selected']
             df = self.analysis.get_specific(item_name)
@@ -320,8 +580,7 @@ class AnalysisGUI(tk.Tk):
         except KeyError:
             return
 
-    def load_dataframe_name(self):
-        combobox = self.__detail_comp['combobox']
+    def load_dataframe_name(self, combobox):
         ls = self.analysis.get_dataframes_name()
         combobox['values'] = ls
 
@@ -354,17 +613,22 @@ class AnalysisGUI(tk.Tk):
         ax.set_ylabel(y_label)
         # Remove using SD
         data = df[x_column]
-        sd = data.std()
-        upper_bound = data.mean() + 3*sd
+        q1 = data.quantile(0.25)
+        q3 = data.quantile(0.75)
+        iqr = q3-q1
+        upper_bound = q3 + 1.5*iqr
         if data.max() < upper_bound:
             upper_bound = data.max()
-        lower_bound = data.mean() - 3*sd
+        lower_bound = q1 - 1.5*iqr
         if data.min() > lower_bound:
             lower_bound = data.min()
         # plot a graph
         if not bins:
             bins = (upper_bound - lower_bound) / 2
-        plt.hist(df[x_column], bins=bins.__ceil__(), range=(lower_bound, upper_bound))
+        if bins >= 1:
+            plt.hist(df[x_column], bins=bins.__ceil__(), range=(lower_bound, upper_bound))
+        else:
+            plt.hist(df[x_column], range=(lower_bound, upper_bound))
         return fig
 
     @staticmethod
@@ -373,19 +637,6 @@ class AnalysisGUI(tk.Tk):
         """ Plot the scatter plot of the data """
         fig, ax = plt.subplots(figsize=(10, 6))
         plt.scatter(df[x_column], df[y_column])
-        ax.set_title(title)
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
-        return fig
-
-    @staticmethod
-    def plot_bar(df, x_column: str, y_column: str, x_label: str, y_label: str,
-                 title: str = 'Bar Plot') -> Figure:
-        """ Plot the bar plot of the data """
-        fig, ax = plt.subplots(figsize=(10, 6))
-        n_df = df[[x_column, y_column]]
-        n_df = n_df.groupby(x_column).mean()
-        plt.bar(n_df.index, n_df[y_column])
         ax.set_title(title)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
@@ -462,3 +713,7 @@ class AnalysisGUI(tk.Tk):
     def run(self):
         """ Run the application GUI"""
         self.mainloop()
+
+    def exit(self):
+        """ Save and Exit the Application"""
+        self.destroy()

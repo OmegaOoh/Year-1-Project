@@ -39,7 +39,7 @@ class AnalysisController:
         """
         return self.__model.to_timeseries_count(interval)
 
-    def mean_time(self, interval: str = 'YE', column: str = 'Price') -> DataFrame:
+    def mean_time(self, column: str = 'Price', interval: str = 'YE') -> DataFrame:
         """ Counts number of occurrences between time interval (Need to convert to datetime format first)
         :param str interval: time interval (datetime interval)
         :param str column: column to get mean from
@@ -98,3 +98,13 @@ class AnalysisController:
         :param content: data to add into dataframe
         :param name: name of the dataframe to save to"""
         self.__model.add_to_dataframe(content, name)
+
+    def get_filter_columns(self) -> dict:
+        return {'num': self.__model.get_num_column(), 'other': self.__model.get_non_numeric_columns()}
+
+    def get_num_column(self) -> list:
+        return self.__model.get_num_column()
+
+    def get_non_numeric_columns(self) -> list:
+        return self.__model.get_non_numeric_columns()
+
