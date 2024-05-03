@@ -1,5 +1,7 @@
 """ GUI module for analysis application"""
 
+import threading
+from queue import Queue
 import tkinter as tk
 import tkinter.messagebox
 from tkinter import ttk, font
@@ -7,8 +9,7 @@ from PIL import ImageTk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-import threading
-from queue import Queue
+
 from analysis_controller import AnalysisController
 
 
@@ -19,7 +20,6 @@ class AnalysisGUI(tk.Tk):
         super().__init__()
         # Controller
         self.analysis = AnalysisController()
-
         # Main GUI
         self.title('Steam Game Market Analysis')
         self.notebook = ttk.Notebook(self)
@@ -41,8 +41,10 @@ class AnalysisGUI(tk.Tk):
 
     def __init_component(self):
         """ initialize tkinter component"""
+
         self.defaultFont = font.nametofont('TkDefaultFont')
         self.defaultFont.configure(size=12)
+
         self.__init_explore()
         self.__init_single_data()
         self.__init_information()
@@ -276,6 +278,30 @@ class AnalysisGUI(tk.Tk):
         root.columnconfigure(1, weight=1)
         root.rowconfigure(0, weight=1)
 
+    def __init_single_data(self):
+        """ Initialise the single data page component"""
+        root = self.pages['Single Data']
+
+        # create table view
+        table_frame = tk.Frame(root)
+        self.__create_table_searchbar(table_frame)
+        table_frame.columnconfigure(0, weight=100)
+        table_frame.columnconfigure(1, weight=20)
+        table_frame.columnconfigure(2, weight=1)
+        table_frame.rowconfigure(0, weight=1)
+        table_frame.rowconfigure(1, weight=500)
+        # create game detail frame
+        detail_frame = tk.Frame(root)
+        self.__create_detail(detail_frame)
+        self.__table.bind('<<TreeviewSelect>>', self.handle_select_game)
+        # main layout management
+        detail_frame.grid(sticky=tk.NSEW, column=0, row=0)
+        self.__detail_comp['detail frame'] = detail_frame
+        table_frame.grid(sticky=tk.NSEW, column=1, row=0)
+        root.columnconfigure(0, weight=4)
+        root.columnconfigure(1, weight=1)
+        root.rowconfigure(0, weight=1)
+
     def handle_change_graph_type(self, e: tk.Event) -> None:
         selected = e.widget.get()
         self.select_graph_type(selected)
@@ -304,7 +330,7 @@ class AnalysisGUI(tk.Tk):
     def handle_visualize(self, x: str = 'Price', y: str = 'Positive',
                          graph_type: str = 'Histogram', filter_list: list = None):
         if x == y:
-            tk.messagebox.showinfo("Invalid XY",  "X and Y must be different")
+            tk.messagebox.showinfo("Invalid XY", "X and Y must be different")
             return
         try:
             fig = self.__explore_comp['figure']
@@ -399,30 +425,6 @@ class AnalysisGUI(tk.Tk):
                 cbb['state'] = tk.NORMAL
                 cbb.current(0)
 
-    def __init_single_data(self):
-        """ Initialise the single data page component"""
-        root = self.pages['Single Data']
-
-        # create table view
-        table_frame = tk.Frame(root)
-        self.__create_table_searchbar(table_frame)
-        table_frame.columnconfigure(0, weight=100)
-        table_frame.columnconfigure(1, weight=20)
-        table_frame.columnconfigure(2, weight=1)
-        table_frame.rowconfigure(0, weight=1)
-        table_frame.rowconfigure(1, weight=500)
-        # create game detail frame
-        detail_frame = tk.Frame(root)
-        self.__create_detail(detail_frame)
-        self.__table.bind('<<TreeviewSelect>>', self.handle_select_game)
-        # main layout management
-        detail_frame.grid(sticky=tk.NSEW, column=0, row=0)
-        self.__detail_comp['detail frame'] = detail_frame
-        table_frame.grid(sticky=tk.NSEW, column=1, row=0)
-        root.columnconfigure(0, weight=4)
-        root.columnconfigure(1, weight=1)
-        root.rowconfigure(0, weight=1)
-
     def __create_detail(self, root):
         """ Create the frame to display the game details """
         picture_frame = tk.Frame(root)
@@ -465,7 +467,7 @@ class AnalysisGUI(tk.Tk):
         neg = tk.Label(root)
         self.__detail_comp['negative'] = neg
 
-        add_to_label = tk.Label(root, text="Add to :", font = 16)
+        add_to_label = tk.Label(root, text="Add to :", font=16)
         add_combobox = ttk.Combobox(root)
         self.__detail_comp['combobox'] = add_combobox
         add_button = ttk.Button(root, text="Add")
@@ -631,13 +633,14 @@ class AnalysisGUI(tk.Tk):
                     index, values = q.get()
                     self.__table.insert("", 0, text=index, values=values)
                 self.after(1, update_table)
+
         thread.join()
         update_table()
 
     def clear_table(self):
         self.__table.delete(*self.__table.get_children())
 
-    def plot_histogram(self,df, x_column: str, x_label: str, y_label: str,
+    def plot_histogram(self, df, x_column: str, x_label: str, y_label: str,
                        title: str = 'Histogram', bins: int = None) -> Figure:
         """ Plot the histogram of the data """
         q = Queue()
@@ -648,7 +651,7 @@ class AnalysisGUI(tk.Tk):
 
     @staticmethod
     def histogram_worker(df, x_column: str, x_label: str, y_label: str,
-                       title: str = 'Histogram', bins: int = None, q: Queue = None) -> None:
+                         title: str = 'Histogram', bins: int = None, q: Queue = None) -> None:
         if not q:
             raise AttributeError('No queue is provided')
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -679,14 +682,14 @@ class AnalysisGUI(tk.Tk):
                      title: str = 'Scatter Plot'):
         q = Queue()
         thread = threading.Thread(target=self.plot_scatter_worker,
-                                  args=(df, x_column, y_column, x_label, y_label,title, q))
+                                  args=(df, x_column, y_column, x_label, y_label, title, q))
         thread.start()
         thread.join()
         return q.get()
 
     @staticmethod
     def plot_scatter_worker(df, x_column: str, y_column: str, x_label: str, y_label: str,
-                     title: str = 'Scatter Plot', q: Queue = None) -> None:
+                            title: str = 'Scatter Plot', q: Queue = None) -> None:
         """ Plot the scatter plot of the data """
         if not q:
             raise AttributeError('No queue is provided')
@@ -702,14 +705,14 @@ class AnalysisGUI(tk.Tk):
         """ Plot the line plot of the data """
         q = Queue()
         thread = threading.Thread(target=self.plot_line_worker,
-                                  args=(df, x_column, y_column, x_label, y_label,title, q))
+                                  args=(df, x_column, y_column, x_label, y_label, title, q))
         thread.start()
         thread.join()
         return q.get()
 
     @staticmethod
     def plot_line_worker(df, x_column: str, y_column: str, x_label: str, y_label: str,
-                  title: str = 'Line Plot', q: Queue = None) -> None:
+                         title: str = 'Line Plot', q: Queue = None) -> None:
         """ Plot the line plot of the data """
         if not q:
             raise AttributeError('No queue is provided')
@@ -721,7 +724,7 @@ class AnalysisGUI(tk.Tk):
         q.put(fig)
 
     def plot_pie(self, df, x_column: str,
-                 title: str = 'Pie Plot', q:Queue = None) -> Figure:
+                 title: str = 'Pie Plot', q: Queue = None) -> Figure:
         """ Plot the pie plot of the data """
         q = Queue()
         thread = threading.Thread(target=self.plot_pie_worker,
@@ -732,7 +735,7 @@ class AnalysisGUI(tk.Tk):
 
     @staticmethod
     def plot_pie_worker(df, x_column: str,
-                 title: str = 'Pie Plot', q:Queue = None) -> None:
+                        title: str = 'Pie Plot', q: Queue = None) -> None:
         """ Plot the pie plot of the data """
         if not q:
             raise AttributeError('No queue is provided')
@@ -774,7 +777,7 @@ class AnalysisGUI(tk.Tk):
         q1_l = tk.Label(desc, text=f"Q1: {q1:.2f}", font='16', anchor='w', justify='left')
         q3 = df[col].quantile(0.75)
         q3_l = tk.Label(desc, text=f"Q1: {q3:.2f}", font='16', anchor='w', justify='left')
-        iqr = q3-q1
+        iqr = q3 - q1
         iqr_l = tk.Label(desc, text=f"IQR: {iqr:.2f}", font='16', anchor='w', justify='left')
 
         extendable = {'expand': True, 'fill': tk.X}
