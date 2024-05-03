@@ -9,6 +9,7 @@ class DataFrameSaver:
         self.df = self.__raw_df.copy(deep=True)
         self.to_datetime()
         self.__raw_df['Release date'] = self.df['Release date']
+        self.df = self.__raw_df.copy(deep=True)
         self.__saved_df = {}
 
     def to_datetime(self):
@@ -34,7 +35,7 @@ class DataFrameSaver:
 
     def get_raw(self) -> pd.DataFrame:
         """ Get raw data of the dataset"""
-        return self.__raw_df
+        return self.__raw_df.copy(deep=True)
 
     def get_all_name(self) -> list:
         """ Get all names of the dataset"""

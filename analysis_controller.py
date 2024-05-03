@@ -108,3 +108,6 @@ class AnalysisController:
     def get_non_numeric_columns(self) -> list:
         return self.__model.get_non_numeric_columns()
 
+    def filter_str(self, col, filter_str):
+        return self.__model.filter_str(col, filter_str)
+

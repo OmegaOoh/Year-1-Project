@@ -24,29 +24,29 @@ class Analysis:
     def to_timeseries_mean(self, interval: str, column: str) -> pd.DataFrame:
         """ returns dataframe that contains mean of given column grouped by release date"""
         df = self.df.df.copy()
-        df = df.set_index(['Release date'])
-        df = df.resample(interval)[column].mean()
-        df = pd.DataFrame(df)
-        df.reset_index(inplace=True)
-        return df
+        df2 = df.set_index(['Release date'])
+        df2 = df2.resample(interval)[column].mean()
+        df2 = pd.DataFrame(df2)
+        df2.reset_index(inplace=True)
+        return df2
 
     def apply(self, target_column, function, axis) -> None:
         """ Apply the given function to the dataframe column"""
-        df = self.df.df
-        df[target_column] = df.apply(function, axis=axis)
-        self.df.df = df
-
+        self.df.df[target_column] = self.df.df.apply(function, axis=axis)
     def filter(self, column:str, expression: str):
         """ Filter and change dataframe to have only data that satisfied expression"""
         df = self.df.df
-        df = df[eval(f"df['{column}'] {expression}")]
-        self.df.df = df
+        df2 = df[eval(f"df['{column}']{expression}")]
+        self.df.df = df2
+
+    def filter_str(self, column:str, expression: str):
+        """ Filter and change dataframe to have only data that satisfied expression"""
+        self.df.df = self.df.df[self.df.df[column].astype(str).str.contains(expression, case=False)]
 
     def search(self, query) -> pd.DataFrame:
         """ Search dataframe based on given query (AppID and Name column) and return dataframe"""
         df = self.df.get_raw().copy()
         result = df[df['AppID'].str.contains(query, case=False) | df['Name'].str.contains(query, case=False)]
-        df['AppID'].str.contains(query).name = 'AppID'
         return result
 
     def get_correlation(self, x, y) -> float:

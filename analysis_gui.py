@@ -6,12 +6,11 @@ import tkinter as tk
 import tkinter.messagebox
 from tkinter import ttk, font
 from PIL import ImageTk
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from analysis_controller import AnalysisController
-
+plt.switch_backend('tkAgg')
 
 class AnalysisGUI(tk.Tk):
     """ GUI class for analysis application"""
@@ -94,11 +93,25 @@ class AnalysisGUI(tk.Tk):
         price_y_cv.get_tk_widget().grid(sticky=tk.NSEW, column=1, row=0)
 
         # Scatter plot of Price and Rating (Scatter)
-        self.analysis.reset_df()
-        self.analysis.filter('Positive', '!= 0')
-        self.analysis.filter('Negative', '!= 0')
-        self.analysis.apply('Rating', lambda x: x['Positive'] / (x['Positive'] + x['Negative']) * 100,
-                            axis=1)
+        def filter_df():
+            self.analysis.reset_df()
+            self.analysis.filter('Positive', '!= 0')
+            self.analysis.filter('Negative', '!= 0')
+            self.analysis.apply('Rating', lambda x: x['Positive'] / (x['Positive'] + x['Negative']) * 100,
+                                axis=1)
+
+        def filter_data():
+            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL)
+            progress_bar.grid(sticky=tk.NSEW, row=2, column=0)
+            thread = threading.Thread(target=filter_df)
+            thread.start()
+            progress_bar.start()
+            while thread.is_alive():
+                progress_bar.update()
+            progress_bar.stop()
+            progress_bar.grid_forget()
+
+        filter_data()
         corr = self.analysis.get_correlation('Price', 'Rating')
         temp_df = self.analysis.get_df()
         scatter_fig = self.plot_scatter(temp_df, "Price", "Rating"
@@ -120,9 +133,23 @@ class AnalysisGUI(tk.Tk):
         rating_desc.grid(sticky=tk.NSEW, column=1, row=0)
 
         # Ratio of Game Genres (Pie Charts)
-        self.analysis.reset_df()
-        self.analysis.to_list('Genres')
-        self.analysis.apply('Primary Genres', lambda x: x['Genres'][0], axis=1)
+        def filter_df():
+            self.analysis.reset_df()
+            self.analysis.to_list('Genres')
+            self.analysis.apply('Primary Genres', lambda x: x['Genres'][0], axis=1)
+
+        def filter_data():
+            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL)
+            progress_bar.grid(sticky=tk.NSEW, row=0, column=1)
+            thread = threading.Thread(target=filter_df)
+            thread.start()
+            progress_bar.start()
+            while thread.is_alive():
+                progress_bar.update()
+            progress_bar.stop()
+            progress_bar.grid_forget()
+
+        filter_data()
 
         pie_fig = self.plot_pie(self.analysis.get_df(), "Primary Genres",
                                 "Ratio of each primary genres")
@@ -334,9 +361,6 @@ class AnalysisGUI(tk.Tk):
 
     def handle_visualize(self, x: str = 'Price', y: str = 'Positive',
                          graph_type: str = 'Histogram', filter_list: list = None):
-        if x == y:
-            tk.messagebox.showinfo("Invalid XY", "X and Y must be different")
-            return
         try:
             fig = self.__explore_comp['figure']
             fig.get_tk_widget().grid_forget()
@@ -347,26 +371,40 @@ class AnalysisGUI(tk.Tk):
             self.analysis.load_df(self.__explore_comp['df'].get())
         except KeyError:
             self.analysis.reset_df()
-        for i in filter_list:
-            i = i.split(' ')
-            expression = i[1] + " " + i[2]
-            match i[1]:
-                case 'is':
-                    expression = expression.replace('is', '==')
-                case 'is not':
-                    expression = expression.replace('is_not', '!=')
-                case 'have':
-                    expression = f".isin({i[2]})"
+        root = self.__explore_comp['plot']
 
-            self.analysis.filter(i[0].replace('_', ' '), expression)
+        def filter_df():
+            for i in filter_list:
+                i = i.split(' ')
+                expression = i[1] + " " + i[2].replace('_', ' ')
+                if i[1] == 'contains':
+                    self.analysis.filter_str(i[0], str(i[2].replace('_', ' ')))
+                else:
+                    self.analysis.filter(i[0].replace('_', ' '), expression)
+        def filter_data():
+            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL)
+            progress_bar.grid(sticky=tk.NSEW, row=0, column=0)
+            thread = threading.Thread(target=filter_df)
+            thread.start()
+            progress_bar.start()
+            while thread.is_alive():
+                progress_bar.update()
+            progress_bar.stop()
+            progress_bar.grid_forget()
 
+        filter_data()
+
+        df = self.analysis.get_df()
         match graph_type:
             case 'Histogram':
-                plot = self.plot_histogram(self.analysis.get_df(), x, x, '')
+                plot = self.plot_histogram(df, x, x, '')
             case "Scatter":
-                plot = self.plot_scatter(self.analysis.get_df(), x, y, x, y)
+                if x == y:
+                    tk.messagebox.showinfo("Invalid XY", "X and Y must be different")
+                    return
+                plot = self.plot_scatter(df, x, y, x, y)
             case "Pie":
-                plot = self.plot_pie(self.analysis.get_df(), x)
+                plot = self.plot_pie(df, x)
             case "Line":
                 x_col = 'Release date'
                 if x == 'count':
@@ -376,7 +414,6 @@ class AnalysisGUI(tk.Tk):
                     df = self.analysis.mean_time(y)
                     plot = self.plot_line(df, x_col, y, x_col, y)
 
-        root = self.__explore_comp['plot']
         figure = FigureCanvasTkAgg(plot, root)
         figure.draw()
         figure.get_tk_widget().grid(sticky=tk.NSEW, column=0, row=0)
@@ -409,26 +446,31 @@ class AnalysisGUI(tk.Tk):
             cbb.current(0)
         if selected in full_dict['other']:
             cbb = self.__explore_comp['condition1']
-            cbb['values'] = ['is', 'have']
+            cbb['values'] = ['contains']
             if selected == 'Genres':
-                cbb['values'] = ['is', 'is not']
                 cbb.current(0)
                 df = self.analysis.get_df()
-                genres = df.apply(lambda x: x['Genres'][0], axis=1)
+                q = Queue()
+
+                def get_genres():
+                    q.put(df.apply(lambda x: x['Genres'][0], axis=1))
+
+                thread = threading.Thread(target=get_genres)
+                thread.start()
+                thread.join()
+                genres = q.get()
                 cbb = self.__explore_comp['condition2']
                 cbb['values'] = genres.unique().tolist()
                 cbb.current(0)
             else:
-                if selected == 'Publisher':
-                    cbb['values'] = ['is', 'is not']
                 cbb.current(0)
                 cbb = self.__explore_comp['condition2']
                 cbb['values'] = self.analysis.get_df()[selected].unique().tolist()
-            if selected != 'Primary Genres' or selected != 'Publisher':
+            if selected != 'Genres' or selected != 'Publisher':
                 cbb['state'] = 'readonly'
             else:
                 cbb['state'] = tk.NORMAL
-                cbb.current(0)
+            cbb.current(0)
 
     def __create_detail(self, root):
         """ Create the frame to display the game details """
@@ -543,9 +585,22 @@ class AnalysisGUI(tk.Tk):
         def load_img():
             q.put(self.analysis.get_picture(image_name))
 
-        thread = threading.Thread(target=load_img)
-        thread.start()
-        thread.join()
+        def wait_process():
+            ls = ['...', '..', '.']
+            txt = 'Getting Image'
+            label['text'] = txt
+            thread = threading.Thread(target=load_img)
+            thread.start()
+            i = 0
+            while thread.is_alive():
+                label['text'] = txt + ls[i]
+                i += 1
+                if i > 2:
+                    i = 0
+            label['text'] = ''
+            thread.join()
+
+        wait_process()
         self.__detail_comp['image'] = q.get()
         img = ImageTk.PhotoImage(self.__detail_comp['image'])
         label.configure(image=img)
@@ -557,13 +612,14 @@ class AnalysisGUI(tk.Tk):
             img = self.__detail_comp['image'].copy()
         except KeyError:
             return
+
         shape = img.size
         ratio = shape[0] / shape[1]
         w = int(3 * e.width / 4) + 1
         h = int(w / ratio) + 1
-        resized_image = ImageTk.PhotoImage(img.resize((w, h)))
-        label.configure(image=resized_image)
-        label.image = resized_image
+        resized_img = ImageTk.PhotoImage(img.resize((w, h)))
+        label.configure(image=resized_img)
+        label.image = resized_img
 
     def handle_select_game(self, *args):
         self.__detail_comp['button']['state'] = tk.NORMAL
@@ -645,20 +701,9 @@ class AnalysisGUI(tk.Tk):
     def clear_table(self):
         self.__table.delete(*self.__table.get_children())
 
-    def plot_histogram(self, df, x_column: str, x_label: str, y_label: str,
-                       title: str = 'Histogram', bins: int = None) -> Figure:
-        """ Plot the histogram of the data """
-        q = Queue()
-        thread = threading.Thread(target=self.histogram_worker, args=(df, x_column, x_label, y_label, title, bins, q))
-        thread.start()
-        thread.join()
-        return q.get()
-
     @staticmethod
-    def histogram_worker(df, x_column: str, x_label: str, y_label: str,
-                         title: str = 'Histogram', bins: int = None, q: Queue = None) -> None:
-        if not q:
-            raise AttributeError('No queue is provided')
+    def plot_histogram(df, x_column: str, x_label: str, y_label: str,
+                       title: str = 'Histogram', bins: int = None) -> Figure:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.set_title(title)
         ax.set_xlabel(x_label)
@@ -681,72 +726,37 @@ class AnalysisGUI(tk.Tk):
             plt.hist(df[x_column], bins=bins.__ceil__(), range=(lower_bound, upper_bound))
         else:
             plt.hist(df[x_column], range=(lower_bound, upper_bound))
-        q.put(fig)
-
-    def plot_scatter(self, df, x_column: str, y_column: str, x_label: str, y_label: str,
-                     title: str = 'Scatter Plot'):
-        q = Queue()
-        thread = threading.Thread(target=self.plot_scatter_worker,
-                                  args=(df, x_column, y_column, x_label, y_label, title, q))
-        thread.start()
-        thread.join()
-        return q.get()
+        return fig
 
     @staticmethod
-    def plot_scatter_worker(df, x_column: str, y_column: str, x_label: str, y_label: str,
-                            title: str = 'Scatter Plot', q: Queue = None) -> None:
+    def plot_scatter(df, x_column: str, y_column: str, x_label: str, y_label: str,
+                     title: str = 'Scatter Plot') -> Figure:
         """ Plot the scatter plot of the data """
-        if not q:
-            raise AttributeError('No queue is provided')
         fig, ax = plt.subplots(figsize=(10, 6))
         plt.scatter(df[x_column], df[y_column])
         ax.set_title(title)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
-        q.put(fig)
-
-    def plot_line(self, df, x_column: str, y_column: str, x_label: str, y_label: str,
-                  title: str = 'Line Plot') -> Figure:
-        """ Plot the line plot of the data """
-        q = Queue()
-        thread = threading.Thread(target=self.plot_line_worker,
-                                  args=(df, x_column, y_column, x_label, y_label, title, q))
-        thread.start()
-        thread.join()
-        return q.get()
+        return fig
 
     @staticmethod
-    def plot_line_worker(df, x_column: str, y_column: str, x_label: str, y_label: str,
-                         title: str = 'Line Plot', q: Queue = None) -> None:
+    def plot_line(df, x_column: str, y_column: str, x_label: str, y_label: str,
+                  title: str = 'Line Plot') -> Figure:
         """ Plot the line plot of the data """
-        if not q:
-            raise AttributeError('No queue is provided')
         fig, ax = plt.subplots(figsize=(10, 6))
         plt.plot(df[x_column], df[y_column])
         ax.set_title(title)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
-        q.put(fig)
-
-    def plot_pie(self, df, x_column: str,
-                 title: str = 'Pie Plot', q: Queue = None) -> Figure:
-        """ Plot the pie plot of the data """
-        q = Queue()
-        thread = threading.Thread(target=self.plot_pie_worker,
-                                  args=(df, x_column, title, q))
-        thread.start()
-        thread.join()
-        return q.get()
+        return fig
 
     @staticmethod
-    def plot_pie_worker(df, x_column: str,
-                        title: str = 'Pie Plot', q: Queue = None) -> None:
+    def plot_pie(df, x_column: str,
+                 title: str = 'Pie Plot') -> Figure:
         """ Plot the pie plot of the data """
-        if not q:
-            raise AttributeError('No queue is provided')
+
         fig, ax = plt.subplots(figsize=(10, 6))
         n_df = df.groupby(df[x_column]).count().reset_index()
-
         def assign_others(x):
             """ Combine the values that below 5% of total to "Others"""
             if x['Name'] < 0.015 * n_df['Name'].sum():
@@ -758,7 +768,7 @@ class AnalysisGUI(tk.Tk):
         data = n_df['Name'].to_numpy()
         plt.pie(data, labels=n_df.index, autopct='%1.1f%%')
         ax.set_title(title)
-        q.put(fig)
+        return fig
 
     def get_descriptive_statistic(self, root, col: str) -> tk.LabelFrame:
         """ Create a label frame of the descriptive statistics """
