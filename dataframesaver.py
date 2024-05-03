@@ -7,6 +7,8 @@ class DataFrameSaver:
         self.__raw_df = pd.read_csv(filename)
         self.__raw_df['AppID'] = self.__raw_df['AppID'].astype(str)
         self.df = self.__raw_df.copy(deep=True)
+        self.to_datetime()
+        self.__raw_df['Release date'] = self.df['Release date']
         self.__saved_df = {}
 
     def to_datetime(self):

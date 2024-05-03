@@ -58,7 +58,7 @@ class AnalysisController:
     def filter(self, column: str, expression: str) -> None:
         """ Filter values in column based on given expression
             Example of expression: '>= 0', '< 1'
-        :param target_column: column name that need to be filter
+        :param column: column name that need to be filter
         :param expression: expression string for filtering
         """
         self.__model.filter(column, expression)

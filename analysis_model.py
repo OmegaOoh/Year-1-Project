@@ -46,6 +46,7 @@ class Analysis:
         """ Search dataframe based on given query (AppID and Name column) and return dataframe"""
         df = self.df.get_raw().copy()
         result = df[df['AppID'].str.contains(query) | df['Name'].str.contains(query)]
+        df['AppID'].str.contains(query).name = 'AppID'
         return result
 
     def get_correlation(self, x, y) -> float:

@@ -8,6 +8,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import threading
+from queue import Queue
 from analysis_controller import AnalysisController
 
 
@@ -60,7 +61,6 @@ class AnalysisGUI(tk.Tk):
         menubar.add_cascade(label='File', menu=file_menu)
 
     def __init_information(self):
-        # TODO Handle long running task
         """ Initialise the information page component"""
         root = self.pages['Information']
         descriptive_frame = tk.LabelFrame(root, text='Descriptive Statistic', font='32')
@@ -154,8 +154,6 @@ class AnalysisGUI(tk.Tk):
         cond_cbb1['values'] = col_list
         cond_cbb1.current(0)
         cond_cbb2 = ttk.Combobox(filter_data, state='readonly')
-        cond_cbb2['values'] = ['<=', '>=', '<', '>', '==', '!=']  # initial condition
-        cond_cbb2.current(0)
         cond_cbb3 = ttk.Combobox(filter_data, state=tk.NORMAL)
         add_button = ttk.Button(filter_data, text="Add Filter")
 
@@ -217,6 +215,10 @@ class AnalysisGUI(tk.Tk):
         graph_type.current(0)
         graph_type.bind('<<ComboboxSelected>>', self.handle_change_graph_type)
 
+        # Set initial combobox values
+        self.select_filter(cond_cbb1.get())
+        self.select_graph_type(graph_type.get())
+
         def extract_tree():
             ls = []
             for line in tree_view.get_children():
@@ -232,7 +234,6 @@ class AnalysisGUI(tk.Tk):
                                                                             data2.get(),
                                                                             graph_type.get(),
                                                                             extract_tree()))
-
         data1_label.grid(sticky=tk.NSEW, padx=5, pady=5, column=0, row=0)
         data1.grid(sticky=tk.NSEW, padx=5, pady=5, column=1, row=0)
         data2_label.grid(sticky=tk.NSEW, padx=5, pady=5, column=2, row=0)
@@ -277,14 +278,13 @@ class AnalysisGUI(tk.Tk):
 
     def handle_change_graph_type(self, e: tk.Event) -> None:
         selected = e.widget.get()
+        self.select_graph_type(selected)
+
+    def select_graph_type(self, selected):
         match selected:
             case 'Histogram':
-                col_list = []
-                for i in self.analysis.get_filter_columns().values():
-                    col_list += i
-                self.__explore_comp['data1']['value'] = col_list
+                self.__explore_comp['data1']['value'] = self.analysis.get_num_column()
                 self.__explore_comp['data2']['state'] = tk.DISABLED
-
             case "Scatter":
                 self.__explore_comp['data1']['value'] = self.analysis.get_num_column()
                 self.__explore_comp['data2']['state'] = 'readonly'
@@ -304,7 +304,7 @@ class AnalysisGUI(tk.Tk):
     def handle_visualize(self, x: str = 'Price', y: str = 'Positive',
                          graph_type: str = 'Histogram', filter_list: list = None):
         if x == y:
-            tk.messagebox.showinfo("Invalid XY","X and Y must be different")
+            tk.messagebox.showinfo("Invalid XY",  "X and Y must be different")
             return
         try:
             fig = self.__explore_comp['figure']
@@ -318,7 +318,17 @@ class AnalysisGUI(tk.Tk):
             self.analysis.reset_df()
         for i in filter_list:
             i = i.split(' ')
-            self.analysis.filter(i[0].replace('_', ' '), i[1] + i[2])
+            expression = i[1] + " " + i[2]
+            match i[1]:
+                case 'is':
+                    expression = expression.replace('is', '==')
+                case 'is not':
+                    expression = expression.replace('is_not', '!=')
+                case 'have':
+                    expression = f".isin({i[2]})"
+
+            self.analysis.filter(i[0].replace('_', ' '), expression)
+
         match graph_type:
             case 'Histogram':
                 plot = self.plot_histogram(self.analysis.get_df(), x, x, '')
@@ -327,7 +337,7 @@ class AnalysisGUI(tk.Tk):
             case "Pie":
                 plot = self.plot_pie(self.analysis.get_df(), x)
             case "Line":
-                x_col = 'Release Date'
+                x_col = 'Release date'
                 if x == 'count':
                     df = self.analysis.count_time()
                     plot = self.plot_line(df, x_col, 'Name', x_col, y)
@@ -352,6 +362,9 @@ class AnalysisGUI(tk.Tk):
     def handle_filter_change(self, event: tk.Event):
         widget = event.widget
         selected = widget.get()
+        self.select_filter(selected)
+
+    def select_filter(self, selected):
         full_dict = self.analysis.get_filter_columns()
         cbb = self.__explore_comp['condition1']
         cbb['values'] = []
@@ -365,7 +378,7 @@ class AnalysisGUI(tk.Tk):
             cbb.current(0)
         if selected in full_dict['other']:
             cbb = self.__explore_comp['condition1']
-            cbb['values'] = ['is', 'have', 'is not', 'not have']
+            cbb['values'] = ['is', 'have']
             if selected == 'Genres':
                 cbb['values'] = ['is', 'is not']
                 cbb.current(0)
@@ -518,8 +531,15 @@ class AnalysisGUI(tk.Tk):
         self.__table.grid(sticky=tk.NSEW, column=0, row=1, columnspan=2)
 
     def change_image(self, image_name: str, label: tk.Label) -> None:
-        # TODO Handle Long Running Task
-        self.__detail_comp['image'] = self.analysis.get_picture(image_name)
+        q = Queue()
+
+        def load_img():
+            q.put(self.analysis.get_picture(image_name))
+
+        thread = threading.Thread(target=load_img)
+        thread.start()
+        thread.join()
+        self.__detail_comp['image'] = q.get()
         img = ImageTk.PhotoImage(self.__detail_comp['image'])
         label.configure(image=img)
         label.image = img
@@ -530,10 +550,9 @@ class AnalysisGUI(tk.Tk):
             img = self.__detail_comp['image'].copy()
         except KeyError:
             return
-        img = img.copy()
         shape = img.size
         ratio = shape[0] / shape[1]
-        w = int(3*e.width/4) + 1
+        w = int(3 * e.width / 4) + 1
         h = int(w / ratio) + 1
         resized_image = ImageTk.PhotoImage(img.resize((w, h)))
         label.configure(image=resized_image)
@@ -585,7 +604,6 @@ class AnalysisGUI(tk.Tk):
         combobox['values'] = ls
 
     def handle_search(self):
-        # TODO Long Running Task
         query = self.__query.get()
         self.clear_table()
         if not query.isspace():
@@ -593,20 +611,46 @@ class AnalysisGUI(tk.Tk):
             self.load_table(searched_df)
 
     def load_table(self, dataframe):
-        # TODO Long Running Task
+        q = Queue()
+
+        def data_prep(df, q):
+            df = df[['AppID', 'Name']]
+            for i, r in df.iterrows():
+                data = (i, list(r))
+                q.put(data)
+
+        thread = threading.Thread(target=data_prep, args=(dataframe, q))
+        thread.start()
         self.clear_table()
-        df = dataframe.copy()
-        df = df[['AppID', 'Name']]
-        for i, r in df.iterrows():
-            self.__table.insert("", 0, text=i, values=list(r))
+
+        def update_table():
+            if not q.empty():
+                for _ in range(7000):
+                    if q.empty():
+                        break
+                    index, values = q.get()
+                    self.__table.insert("", 0, text=index, values=values)
+                self.after(1, update_table)
+        thread.join()
+        update_table()
 
     def clear_table(self):
         self.__table.delete(*self.__table.get_children())
 
-    @staticmethod
-    def plot_histogram(df, x_column: str, x_label: str, y_label: str,
+    def plot_histogram(self,df, x_column: str, x_label: str, y_label: str,
                        title: str = 'Histogram', bins: int = None) -> Figure:
         """ Plot the histogram of the data """
+        q = Queue()
+        thread = threading.Thread(target=self.histogram_worker, args=(df, x_column, x_label, y_label, title, bins, q))
+        thread.start()
+        thread.join()
+        return q.get()
+
+    @staticmethod
+    def histogram_worker(df, x_column: str, x_label: str, y_label: str,
+                       title: str = 'Histogram', bins: int = None, q: Queue = None) -> None:
+        if not q:
+            raise AttributeError('No queue is provided')
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.set_title(title)
         ax.set_xlabel(x_label)
@@ -615,11 +659,11 @@ class AnalysisGUI(tk.Tk):
         data = df[x_column]
         q1 = data.quantile(0.25)
         q3 = data.quantile(0.75)
-        iqr = q3-q1
-        upper_bound = q3 + 1.5*iqr
+        iqr = q3 - q1
+        upper_bound = q3 + 1.5 * iqr
         if data.max() < upper_bound:
             upper_bound = data.max()
-        lower_bound = q1 - 1.5*iqr
+        lower_bound = q1 - 1.5 * iqr
         if data.min() > lower_bound:
             lower_bound = data.min()
         # plot a graph
@@ -629,34 +673,69 @@ class AnalysisGUI(tk.Tk):
             plt.hist(df[x_column], bins=bins.__ceil__(), range=(lower_bound, upper_bound))
         else:
             plt.hist(df[x_column], range=(lower_bound, upper_bound))
-        return fig
+        q.put(fig)
+
+    def plot_scatter(self, df, x_column: str, y_column: str, x_label: str, y_label: str,
+                     title: str = 'Scatter Plot'):
+        q = Queue()
+        thread = threading.Thread(target=self.plot_scatter_worker,
+                                  args=(df, x_column, y_column, x_label, y_label,title, q))
+        thread.start()
+        thread.join()
+        return q.get()
 
     @staticmethod
-    def plot_scatter(df, x_column: str, y_column: str, x_label: str, y_label: str,
-                     title: str = 'Scatter Plot') -> Figure:
+    def plot_scatter_worker(df, x_column: str, y_column: str, x_label: str, y_label: str,
+                     title: str = 'Scatter Plot', q: Queue = None) -> None:
         """ Plot the scatter plot of the data """
+        if not q:
+            raise AttributeError('No queue is provided')
         fig, ax = plt.subplots(figsize=(10, 6))
         plt.scatter(df[x_column], df[y_column])
         ax.set_title(title)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
-        return fig
+        q.put(fig)
 
-    @staticmethod
-    def plot_line(df, x_column: str, y_column: str, x_label: str, y_label: str,
+    def plot_line(self, df, x_column: str, y_column: str, x_label: str, y_label: str,
                   title: str = 'Line Plot') -> Figure:
         """ Plot the line plot of the data """
+        q = Queue()
+        thread = threading.Thread(target=self.plot_line_worker,
+                                  args=(df, x_column, y_column, x_label, y_label,title, q))
+        thread.start()
+        thread.join()
+        return q.get()
+
+    @staticmethod
+    def plot_line_worker(df, x_column: str, y_column: str, x_label: str, y_label: str,
+                  title: str = 'Line Plot', q: Queue = None) -> None:
+        """ Plot the line plot of the data """
+        if not q:
+            raise AttributeError('No queue is provided')
         fig, ax = plt.subplots(figsize=(10, 6))
         plt.plot(df[x_column], df[y_column])
         ax.set_title(title)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
-        return fig
+        q.put(fig)
+
+    def plot_pie(self, df, x_column: str,
+                 title: str = 'Pie Plot', q:Queue = None) -> Figure:
+        """ Plot the pie plot of the data """
+        q = Queue()
+        thread = threading.Thread(target=self.plot_pie_worker,
+                                  args=(df, x_column, title, q))
+        thread.start()
+        thread.join()
+        return q.get()
 
     @staticmethod
-    def plot_pie(df, x_column: str,
-                 title: str = 'Pie Plot') -> Figure:
+    def plot_pie_worker(df, x_column: str,
+                 title: str = 'Pie Plot', q:Queue = None) -> None:
         """ Plot the pie plot of the data """
+        if not q:
+            raise AttributeError('No queue is provided')
         fig, ax = plt.subplots(figsize=(10, 6))
         n_df = df.groupby(df[x_column]).count().reset_index()
 
@@ -671,7 +750,7 @@ class AnalysisGUI(tk.Tk):
         data = n_df['Name'].to_numpy()
         plt.pie(data, labels=n_df.index, autopct='%1.1f%%')
         ax.set_title(title)
-        return fig
+        q.put(fig)
 
     def get_descriptive_statistic(self, root, col: str) -> tk.LabelFrame:
         """ Create a label frame of the descriptive statistics """
