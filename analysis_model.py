@@ -45,7 +45,7 @@ class Analysis:
     def search(self, query) -> pd.DataFrame:
         """ Search dataframe based on given query (AppID and Name column) and return dataframe"""
         df = self.df.get_raw().copy()
-        result = df[df['AppID'].str.contains(query) | df['Name'].str.contains(query)]
+        result = df[df['AppID'].str.contains(query, case=False) | df['Name'].str.contains(query, case=False)]
         df['AppID'].str.contains(query).name = 'AppID'
         return result
 

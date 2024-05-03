@@ -56,6 +56,11 @@ class AnalysisGUI(tk.Tk):
         self.notebook.pack(fill=tk.BOTH, expand=True)
         self.notebook.bind('<<NotebookTabChanged>>', self.handle_tab_change)
 
+        # Set initial screen size to prevent the window to be larger than screen
+        width = self.winfo_screenwidth()
+        height = self.winfo_screenheight()
+        self.geometry(f'{int(0.75 * width)}x{int(0.75 * height)}')
+
         menubar = tk.Menu(self)
         self.config(menu=menubar)
         file_menu = tk.Menu(menubar)
