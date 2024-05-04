@@ -641,7 +641,7 @@ class AnalysisGUI(tk.Tk):
         self.__detail_comp['selected'] = item_name
 
         self.__detail_comp['game title'].configure(text=get_detail('Name'))
-        self.__detail_comp['price'].configure(text=f'{get_detail('Price'):,.2f} USD')
+        self.__detail_comp['price'].configure(text=f'{get_detail("Price"):,.2f} USD')
         self.__detail_comp['publisher'].configure(text=get_detail('Publishers'))
         self.__detail_comp['genre'].configure(text=get_detail('Genres'))
         self.__detail_comp['peakCCU'].configure(text=get_detail('Peak CCU'))
