@@ -816,4 +816,4 @@ class AnalysisGUI(tk.Tk):
 
     def exit(self):
         """ Save and Exit the Application"""
-        self.destroy()
+        self.quit()
