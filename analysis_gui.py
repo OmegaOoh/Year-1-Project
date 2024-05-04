@@ -372,7 +372,7 @@ class AnalysisGUI(tk.Tk):
         except KeyError:
             self.analysis.reset_df()
         root = self.__explore_comp['plot']
-
+        self.analysis.reset_df()
         def filter_df():
             for i in filter_list:
                 i = i.split(' ')
@@ -381,6 +381,7 @@ class AnalysisGUI(tk.Tk):
                     self.analysis.filter_str(i[0], str(i[2].replace('_', ' ')))
                 else:
                     self.analysis.filter(i[0].replace('_', ' '), expression)
+
         def filter_data():
             progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL)
             progress_bar.grid(sticky=tk.NSEW, row=0, column=0)
