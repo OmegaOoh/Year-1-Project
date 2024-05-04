@@ -364,6 +364,7 @@ class AnalysisGUI(tk.Tk):
         try:
             fig = self.__explore_comp['figure']
             fig.get_tk_widget().grid_forget()
+            plt.close(fig.figure)
             del fig
         except KeyError:
             pass
@@ -371,8 +372,9 @@ class AnalysisGUI(tk.Tk):
             self.analysis.load_df(self.__explore_comp['df'].get())
         except KeyError:
             self.analysis.reset_df()
+
         root = self.__explore_comp['plot']
-        self.analysis.reset_df()
+
         def filter_df():
             for i in filter_list:
                 i = i.split(' ')
@@ -434,6 +436,7 @@ class AnalysisGUI(tk.Tk):
         self.select_filter(selected)
 
     def select_filter(self, selected):
+        self.analysis.reset_df()
         full_dict = self.analysis.get_filter_columns()
         cbb = self.__explore_comp['condition1']
         cbb['values'] = []
@@ -639,7 +642,6 @@ class AnalysisGUI(tk.Tk):
             return details[column].values[0]
 
         self.__detail_comp['selected'] = item_name
-
         self.__detail_comp['game title'].configure(text=get_detail('Name'))
         self.__detail_comp['price'].configure(text=f'{get_detail("Price"):,.2f} USD')
         self.__detail_comp['publisher'].configure(text=get_detail('Publishers'))
