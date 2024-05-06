@@ -1,16 +1,18 @@
 """ GUI module for analysis application"""
 
 import threading
+import time
 from queue import Queue
 import tkinter as tk
 import tkinter.messagebox
 from tkinter import ttk, font
-from PIL import ImageTk
+from PIL import ImageTk, Image
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from analysis_controller import AnalysisController
 plt.switch_backend('tkAgg')
+
 
 class AnalysisGUI(tk.Tk):
     """ GUI class for analysis application"""
@@ -66,6 +68,8 @@ class AnalysisGUI(tk.Tk):
         file_menu.add_command(label='Exit', command=self.exit)
         menubar.add_cascade(label='File', menu=file_menu)
 
+        self.protocol('WM_DELETE_WINDOW', self.exit)
+
     def __init_information(self):
         """ Initialise the information page component"""
         root = self.pages['Information']
@@ -101,13 +105,13 @@ class AnalysisGUI(tk.Tk):
                                 axis=1)
 
         def filter_data():
-            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL)
+            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL,mode='indeterminate')
             progress_bar.grid(sticky=tk.NSEW, row=2, column=0)
             thread = threading.Thread(target=filter_df)
             thread.start()
             progress_bar.start()
             while thread.is_alive():
-                progress_bar.update()
+                self.update()
             progress_bar.stop()
             progress_bar.grid_forget()
 
@@ -139,13 +143,13 @@ class AnalysisGUI(tk.Tk):
             self.analysis.apply('Primary Genres', lambda x: x['Genres'][0], axis=1)
 
         def filter_data():
-            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL)
+            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL, mode='indeterminate')
             progress_bar.grid(sticky=tk.NSEW, row=0, column=1)
             thread = threading.Thread(target=filter_df)
             thread.start()
             progress_bar.start()
             while thread.is_alive():
-                progress_bar.update()
+                self.update()
             progress_bar.stop()
             progress_bar.grid_forget()
 
@@ -244,7 +248,7 @@ class AnalysisGUI(tk.Tk):
         data2 = ttk.Combobox(data_frame, state='readonly')
         self.__explore_comp['data2'] = data2
         graph_label = tk.Label(data_frame, text='Graph Type: ')
-        graph_type = ttk.Combobox(data_frame)
+        graph_type = ttk.Combobox(data_frame, state='readonly')
         graph_type['values'] = ['Scatter', 'Histogram', 'Pie', 'Line']
         graph_type.current(0)
         graph_type.bind('<<ComboboxSelected>>', self.handle_change_graph_type)
@@ -385,13 +389,13 @@ class AnalysisGUI(tk.Tk):
                     self.analysis.filter(i[0].replace('_', ' '), expression)
 
         def filter_data():
-            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL)
+            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL,mode='indeterminate')
             progress_bar.grid(sticky=tk.NSEW, row=0, column=0)
             thread = threading.Thread(target=filter_df)
             thread.start()
             progress_bar.start()
             while thread.is_alive():
-                progress_bar.update()
+                self.update()
             progress_bar.stop()
             progress_bar.grid_forget()
 
@@ -416,7 +420,6 @@ class AnalysisGUI(tk.Tk):
                 elif x == 'average':
                     df = self.analysis.mean_time(y)
                     plot = self.plot_line(df, x_col, y, x_col, y)
-
         figure = FigureCanvasTkAgg(plot, root)
         figure.draw()
         figure.get_tk_widget().grid(sticky=tk.NSEW, column=0, row=0)
@@ -453,14 +456,27 @@ class AnalysisGUI(tk.Tk):
             cbb['values'] = ['contains']
             if selected == 'Genres':
                 cbb.current(0)
-                df = self.analysis.get_df()
                 q = Queue()
 
                 def get_genres():
-                    q.put(df.apply(lambda x: x['Genres'][0], axis=1))
+                    g = self.analysis.get_raw().apply(lambda x: x['Genres'][0], axis=1)
+                    q.put(g)
 
                 thread = threading.Thread(target=get_genres)
                 thread.start()
+                progressbar = ttk.Progressbar(self, orient=tk.VERTICAL, mode='indeterminate')
+                progressbar.pack(side=tk.TOP, fill=tk.X, expand=True)
+                progressbar.start()
+
+                def wait():
+                    if not thread.is_alive():
+                        return
+                    self.update()
+                    self.after(10, wait)
+
+                wait()
+                progressbar.stop()
+                progressbar.pack_forget()
                 thread.join()
                 genres = q.get()
                 cbb = self.__explore_comp['condition2']
@@ -584,27 +600,38 @@ class AnalysisGUI(tk.Tk):
         self.__table.grid(sticky=tk.NSEW, column=0, row=1, columnspan=2)
 
     def change_image(self, image_name: str, label: tk.Label) -> None:
+
         q = Queue()
 
+        # try:
+        #     old_image = label.image  # Save the copy of the image to prevent python garbage collection
+        # except AttributeError:
+        #     pass
+        # label.configure(image=None)
+        # label.image = None
+
         def load_img():
-            q.put(self.analysis.get_picture(image_name))
+            image = self.analysis.get_picture(image_name)
+            q.put(image)
 
-        def wait_process():
+        thread = threading.Thread(target=load_img)
+        thread.start()
+
+        def wait_process(i):
             ls = ['...', '..', '.']
-            txt = 'Getting Image'
-            label['text'] = txt
-            thread = threading.Thread(target=load_img)
-            thread.start()
-            i = 0
-            while thread.is_alive():
-                label['text'] = txt + ls[i]
-                i += 1
-                if i > 2:
-                    i = 0
-            label['text'] = ''
-            thread.join()
+            if not thread.is_alive():
+                return
+            label.configure(text='Loading' + ls[i])
+            self.update()
+            i += 1
+            if i > 2:
+                i = 0
+            self.after(100, lambda: wait_process(i))
 
-        wait_process()
+        wait_process(0)
+        # if old_image:
+        #     del old_image
+        label.configure(text='')
         self.__detail_comp['image'] = q.get()
         img = ImageTk.PhotoImage(self.__detail_comp['image'])
         label.configure(image=img)
@@ -613,7 +640,10 @@ class AnalysisGUI(tk.Tk):
     def resize_image(self, label: tk.Label, e: tk.Event) -> None:
         """ Resize to image according to width and height of the frame (according to events)"""
         try:
-            img = self.__detail_comp['image'].copy()
+            if self.__detail_comp['image'] is not None:
+                img = self.__detail_comp['image']
+            else:
+                return
         except KeyError:
             return
 
@@ -621,9 +651,11 @@ class AnalysisGUI(tk.Tk):
         ratio = shape[0] / shape[1]
         w = int(3 * e.width / 4) + 1
         h = int(w / ratio) + 1
-        resized_img = ImageTk.PhotoImage(img.resize((w, h)))
-        label.configure(image=resized_img)
-        label.image = resized_img
+        resized = img.resize((w, h))
+        resized_imgtk = ImageTk.PhotoImage(resized)
+        label.configure(image=resized_imgtk)
+        label.image = resized_imgtk
+        self.__detail_comp['image'] = resized
 
     def handle_select_game(self, *args):
         self.__detail_comp['button']['state'] = tk.NORMAL
@@ -760,6 +792,7 @@ class AnalysisGUI(tk.Tk):
 
         fig, ax = plt.subplots(figsize=(10, 6))
         n_df = df.groupby(df[x_column]).count().reset_index()
+
         def assign_others(x):
             """ Combine the values that below 5% of total to "Others"""
             if x['Name'] < 0.015 * n_df['Name'].sum():
@@ -814,6 +847,11 @@ class AnalysisGUI(tk.Tk):
         """ Run the application GUI"""
         self.mainloop()
 
+
     def exit(self):
         """ Save and Exit the Application"""
-        self.quit()
+        confirmation = tk.messagebox.askokcancel(title="Exit Application",
+                                                 message="Are you sure you want to exit?")
+        if confirmation:
+            self.quit()
+            # TODO add saving of custom dataframe
