@@ -111,3 +111,8 @@ class AnalysisController:
     def filter_str(self, col, filter_str):
         return self.__model.filter_str(col, filter_str)
 
+    def save_all(self):
+        self.__model.df.save_all_df()
+
+    def get_unique_genres(self) -> list:
+        return self.__model.get_all_genres()

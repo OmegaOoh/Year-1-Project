@@ -1,5 +1,7 @@
+import glob
+
 import pandas as pd
-from pandas.core.interchange import column
+import os
 
 
 class DataFrameSaver:
@@ -11,6 +13,7 @@ class DataFrameSaver:
         self.__raw_df['Release date'] = self.df['Release date']
         self.df = self.__raw_df.copy(deep=True)
         self.__saved_df = {}
+        self.read_saved_df()
 
     def to_datetime(self):
         self.df['Release date'] = self.df['Release date'].apply(lambda x: to_datetime(x))
@@ -50,6 +53,29 @@ class DataFrameSaver:
         except KeyError:
             self.__saved_df[name] = pd.DataFrame(content)
 
+    def read_saved_df(self) -> None:
+        try:
+            os.chdir('saved')
+        except FileNotFoundError:
+            os.mkdir('saved')
+            os.chdir('saved')
+        all_csv = glob.glob('*.csv')
+        for i in all_csv:
+            df = pd.read_csv(i)
+            name = str(i).removesuffix('.csv')
+            self.__saved_df[name] = df
+        os.chdir('../')
+
+    def save_all_df(self):
+        try:
+            os.chdir('saved')
+        except FileNotFoundError:
+            os.mkdir('saved')
+            os.chdir('saved')
+        for i in self.__saved_df:
+            self.__saved_df[i].to_csv(i + '.csv')
+        os.chdir('../')
+
 
 def to_datetime(date_str):
     try:
@@ -58,3 +84,4 @@ def to_datetime(date_str):
         pass
     date_obj = pd.to_datetime(date_str, format="%b %Y")
     return date_obj
+

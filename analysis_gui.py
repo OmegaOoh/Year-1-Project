@@ -1,12 +1,11 @@
 """ GUI module for analysis application"""
 
 import threading
-import time
 from queue import Queue
 import tkinter as tk
 import tkinter.messagebox
 from tkinter import ttk, font
-from PIL import ImageTk, Image
+from PIL import ImageTk
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -65,6 +64,7 @@ class AnalysisGUI(tk.Tk):
         menubar = tk.Menu(self)
         self.config(menu=menubar)
         file_menu = tk.Menu(menubar)
+        file_menu.add_command(label='Save', command=self.analysis.save_all)
         file_menu.add_command(label='Exit', command=self.exit)
         menubar.add_cascade(label='File', menu=file_menu)
 
@@ -105,7 +105,7 @@ class AnalysisGUI(tk.Tk):
                                 axis=1)
 
         def filter_data():
-            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL,mode='indeterminate')
+            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL, mode='indeterminate')
             progress_bar.grid(sticky=tk.NSEW, row=2, column=0)
             thread = threading.Thread(target=filter_df)
             thread.start()
@@ -118,9 +118,9 @@ class AnalysisGUI(tk.Tk):
         filter_data()
         corr = self.analysis.get_correlation('Price', 'Rating')
         temp_df = self.analysis.get_df()
-        scatter_fig = self.plot_scatter(temp_df, "Price", "Rating"
-                                        , "Price", "Rating", f"Scatter of Price and Rating \n"
-                                                             f"Correlation: {corr:.5f}")
+        scatter_fig = self.plot_scatter(temp_df, "Price", "Rating",
+                                        "Price", "Rating", f"Scatter of Price and Rating \n"
+                                        f"Correlation: {corr:.5f}")
         scatter_cv = FigureCanvasTkAgg(scatter_fig, root)
         scatter_cv.draw()
         scatter_cv.get_tk_widget().grid(sticky=tk.NSEW, column=2, row=0)
@@ -389,7 +389,8 @@ class AnalysisGUI(tk.Tk):
                     self.analysis.filter(i[0].replace('_', ' '), expression)
 
         def filter_data():
-            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL,mode='indeterminate')
+            progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL,
+                                           mode='indeterminate')
             progress_bar.grid(sticky=tk.NSEW, row=0, column=0)
             thread = threading.Thread(target=filter_df)
             thread.start()
@@ -459,7 +460,7 @@ class AnalysisGUI(tk.Tk):
                 q = Queue()
 
                 def get_genres():
-                    g = self.analysis.get_raw().apply(lambda x: x['Genres'][0], axis=1)
+                    g = self.analysis.get_unique_genres()
                     q.put(g)
 
                 thread = threading.Thread(target=get_genres)
@@ -503,27 +504,27 @@ class AnalysisGUI(tk.Tk):
 
         # Text element
         title_label = tk.Label(root, text="Title :")
-        title = tk.Label(root, font=16)
+        title = tk.Label(root)
         self.__detail_comp['game title'] = title
 
         price_label = tk.Label(root, text="Price :")
-        price = tk.Label(root, font=16)
+        price = tk.Label(root)
         self.__detail_comp['price'] = price
 
         publisher_label = tk.Label(root, text="Publishers :")
-        pub = tk.Label(root, font=16)
+        pub = tk.Label(root)
         self.__detail_comp['publisher'] = pub
 
         genres_label = tk.Label(root, text="Genres :")
-        genres = tk.Label(root, font=16)
+        genres = tk.Label(root)
         self.__detail_comp['genre'] = genres
 
         peak_ccu_label = tk.Label(root, text="Peak CCU: ")
-        peak_ccu = tk.Label(root, font=16)
+        peak_ccu = tk.Label(root)
         self.__detail_comp['peakCCU'] = peak_ccu
 
         average_playtime_label = tk.Label(root, text="Average Playtime")
-        avg_playtime = tk.Label(root, font=16)
+        avg_playtime = tk.Label(root)
         self.__detail_comp['playtime'] = avg_playtime
 
         positive_label = tk.Label(root, text="Positive: ")
@@ -534,7 +535,7 @@ class AnalysisGUI(tk.Tk):
         neg = tk.Label(root)
         self.__detail_comp['negative'] = neg
 
-        add_to_label = tk.Label(root, text="Add to :", font=16)
+        add_to_label = tk.Label(root, text="Add to :")
         add_combobox = ttk.Combobox(root)
         self.__detail_comp['combobox'] = add_combobox
         add_button = ttk.Button(root, text="Add")
@@ -603,12 +604,12 @@ class AnalysisGUI(tk.Tk):
 
         q = Queue()
 
-        # try:
-        #     old_image = label.image  # Save the copy of the image to prevent python garbage collection
-        # except AttributeError:
-        #     pass
-        # label.configure(image=None)
-        # label.image = None
+        try:
+            old_image = label.image  # Save the copy of the image to prevent from python garbage collection
+        except AttributeError:
+            old_image = None
+        label.configure(image=None)
+        label.image = None
 
         def load_img():
             image = self.analysis.get_picture(image_name)
@@ -629,13 +630,13 @@ class AnalysisGUI(tk.Tk):
             self.after(100, lambda: wait_process(i))
 
         wait_process(0)
-        # if old_image:
-        #     del old_image
         label.configure(text='')
         self.__detail_comp['image'] = q.get()
         img = ImageTk.PhotoImage(self.__detail_comp['image'])
         label.configure(image=img)
         label.image = img
+        if old_image:
+            del old_image
 
     def resize_image(self, label: tk.Label, e: tk.Event) -> None:
         """ Resize to image according to width and height of the frame (according to events)"""
@@ -702,20 +703,36 @@ class AnalysisGUI(tk.Tk):
         combobox['values'] = ls
 
     def handle_search(self):
-        query = self.__query.get()
-        self.clear_table()
-        if not query.isspace():
-            searched_df = self.analysis.search(query)
-            self.load_table(searched_df)
+        search_q = self.__query.get()
+        if not search_q.isspace() and search_q != '':
+            q = Queue()
+
+            self.clear_table()
+
+            def search(query: str, queue: Queue):
+                r = self.analysis.search(query)
+                queue.put(r)
+
+            def wait():
+                if not thread.is_alive():
+                    return
+                self.after(10, wait)
+
+            thread = threading.Thread(target=lambda: search(search_q, q))
+            thread.start()
+
+            wait()
+            thread.join()
+            self.load_table(q.get())
 
     def load_table(self, dataframe):
         q = Queue()
 
-        def data_prep(df, q):
+        def data_prep(df, que: Queue):
             df = df[['AppID', 'Name']]
             for i, r in df.iterrows():
                 data = (i, list(r))
-                q.put(data)
+                que.put(data)
 
         thread = threading.Thread(target=data_prep, args=(dataframe, q))
         thread.start()
@@ -723,11 +740,12 @@ class AnalysisGUI(tk.Tk):
 
         def update_table():
             if not q.empty():
-                for _ in range(7000):
+                for _ in range(1000):
                     if q.empty():
                         break
                     index, values = q.get()
                     self.__table.insert("", 0, text=index, values=values)
+                self.update()
                 self.after(1, update_table)
 
         thread.join()
@@ -810,20 +828,19 @@ class AnalysisGUI(tk.Tk):
         """ Create a label frame of the descriptive statistics """
         desc = tk.LabelFrame(root, text=col, font="22")
         df = self.analysis.get_df()
-        range_l = tk.Label(desc, text=f"Range: {df[col].min():.2f} - "
-                                      f"{df[col].max():.2f}"
-                           , font='16', anchor='w', justify='left')
-        mean = tk.Label(desc, text=f"Mean: {df[col].mean():.2f}"
-                        , font='16', anchor='w', justify='left')
-        median = tk.Label(desc, text=f"Median: {df[col].median():.2f}"
-                          , font='16', anchor='w', justify='left')
+        range_l = tk.Label(desc, text=f"Range: {df[col].min():.2f} - {df[col].max():.2f}",
+                           font='16', anchor='w', justify='left')
+        mean = tk.Label(desc, text=f"Mean: {df[col].mean():.2f}",
+                        font='16', anchor='w', justify='left')
+        median = tk.Label(desc, text=f"Median: {df[col].median():.2f}",
+                          font='16', anchor='w', justify='left')
         mode_val = df[col].mode()
         count_mode_val = df[df[col] == mode_val[0]].count()[col]
-        mode = tk.Label(desc, text=f"Mode: {mode_val[0]}, Count: {count_mode_val}"
-                        , font='16', anchor='w', justify='left')
-        sd = tk.Label(desc, text=f"SD: {df[col].std():.2f}", font='16', anchor='w', justify='left')
-        var = tk.Label(desc, text=f"Variance: {df[col].var():.2f}"
-                       , font='16', anchor='w', justify='left')
+        mode = tk.Label(desc, text=f"Mode: {mode_val[0]}, Count: {count_mode_val}",
+                        font='16', anchor='w', justify='left')
+        sd = tk.Label(desc, text=f"SD: {df[col].std():.2f}", font='16',
+                      anchor='w', justify='left')
+        var = tk.Label(desc, text=f"Variance: {df[col].var():.2f}", font='16', anchor='w', justify='left')
         q1 = df[col].quantile(0.25)
         q1_l = tk.Label(desc, text=f"Q1: {q1:.2f}", font='16', anchor='w', justify='left')
         q3 = df[col].quantile(0.75)
@@ -847,11 +864,10 @@ class AnalysisGUI(tk.Tk):
         """ Run the application GUI"""
         self.mainloop()
 
-
     def exit(self):
         """ Save and Exit the Application"""
         confirmation = tk.messagebox.askokcancel(title="Exit Application",
                                                  message="Are you sure you want to exit?")
         if confirmation:
+            self.analysis.save_all()
             self.quit()
-            # TODO add saving of custom dataframe

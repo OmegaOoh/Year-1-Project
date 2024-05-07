@@ -1,5 +1,7 @@
 """ Analysis model for all most operation in GUI application"""
+import itertools
 
+import numpy as np
 import pandas as pd
 from PIL import Image
 import requests
@@ -33,6 +35,7 @@ class Analysis:
     def apply(self, target_column, function, axis) -> None:
         """ Apply the given function to the dataframe column"""
         self.df.df[target_column] = self.df.df.apply(function, axis=axis)
+
     def filter(self, column:str, expression: str):
         """ Filter and change dataframe to have only data that satisfied expression"""
         df = self.df.df
@@ -66,6 +69,11 @@ class Analysis:
 
     def get_saved_name(self) -> list:
         return self.df.get_all_name()
+
+    def get_all_genres(self):
+        df = self.df.get_raw()
+        unique = np.unique([*itertools.chain.from_iterable(df['Genres'])])
+        return unique.tolist()
 
     def add_to_dataframe(self, content: (pd.Series, pd.DataFrame), name: str) -> None:
         """ Add specified content to named dataframe """
