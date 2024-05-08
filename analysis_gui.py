@@ -479,9 +479,8 @@ class AnalysisGUI(tk.Tk):
                 progressbar.stop()
                 progressbar.pack_forget()
                 thread.join()
-                genres = q.get()
                 cbb = self.__explore_comp['condition2']
-                cbb['values'] = genres.unique().tolist()
+                cbb['values'] = q.get()
                 cbb.current(0)
             else:
                 cbb.current(0)
@@ -535,6 +534,18 @@ class AnalysisGUI(tk.Tk):
         neg = tk.Label(root)
         self.__detail_comp['negative'] = neg
 
+        est_own_label = tk.Label(root, text="Estimated Owner :")
+        est_own = tk.Label(root)
+        self.__detail_comp['est_owner'] = est_own
+
+        steamdb = tk.Label(root, text="Visit Steamdb Site", fg='blue', cursor='hand2')
+        steamdb.bind("<Button-1>", lambda x: self.analysis.visit_steamdb())
+        self.__detail_comp['steamdb'] = steamdb
+
+        steam = tk.Label(root, text="Visit Steam Store", fg='blue', cursor='hand2')
+        steam.bind("<Button-1>",lambda x: self.analysis.visit_steam())
+        self.__detail_comp['steam'] = steam
+
         add_to_label = tk.Label(root, text="Add to :")
         add_combobox = ttk.Combobox(root)
         self.__detail_comp['combobox'] = add_combobox
@@ -562,15 +573,19 @@ class AnalysisGUI(tk.Tk):
         pos.grid(sticky=tk.NSEW, row=4, column=1)
         negative_label.grid(sticky=tk.NSEW, row=4, column=2)
         neg.grid(sticky=tk.NSEW, row=4, column=3)
+        est_own_label.grid(sticky=tk.NSEW, row=5, column=0)
+        est_own.grid(sticky=tk.NSEW, row=5, column=1)
+        steamdb.grid(sticky=tk.NSEW, row=5, column=2)
+        steam.grid(sticky=tk.NSEW, row=5, column=3)
 
-        add_to_label.grid(sticky=tk.W, row=5, column=0)
-        add_combobox.grid(sticky=tk.EW, row=6, column=1, columnspan=2)
-        add_button.grid(sticky=tk.EW, row=6, column=3)
+        add_to_label.grid(sticky=tk.W, row=6, column=0)
+        add_combobox.grid(sticky=tk.EW, row=7, column=1, columnspan=2)
+        add_button.grid(sticky=tk.EW, row=7, column=3)
 
-        for i in range(6):
+        for i in range(7):
             root.rowconfigure(i, weight=5)
-        root.rowconfigure(6, weight=1)
-        for i in range(4):
+        root.rowconfigure(7, weight=1)
+        for i in range(5):
             root.columnconfigure(i, weight=1)
 
     def __create_table_searchbar(self, root):
@@ -683,6 +698,11 @@ class AnalysisGUI(tk.Tk):
         self.__detail_comp['playtime'].configure(text=f"{get_detail('Average playtime forever'):,}")
         self.__detail_comp['positive'].configure(text=f"{get_detail('Positive'):,}")
         self.__detail_comp['negative'].configure(text=f"{get_detail('Negative'):,}")
+        self.__detail_comp['est_owner'].configure(text=get_detail('Estimated owners'))
+        self.__detail_comp['steam'].unbind('<Button-1>')
+        self.__detail_comp['steamdb'].unbind('<Button-1>')
+        self.__detail_comp['steam'].bind("<Button-1>", lambda x: self.analysis.visit_steam(get_detail('Name')))
+        self.__detail_comp['steamdb'].bind("<Button-1>", lambda x: self.analysis.visit_steamdb(get_detail('Name')))
 
         self.load_dataframe_name(self.__detail_comp['combobox'])
 

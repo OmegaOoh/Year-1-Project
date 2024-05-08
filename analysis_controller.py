@@ -116,3 +116,9 @@ class AnalysisController:
 
     def get_unique_genres(self) -> list:
         return self.__model.get_all_genres()
+
+    def visit_steamdb(self, name: str = '') -> None:
+        self.__model.open_steamdb(name)
+
+    def visit_steam(self, name: str = '') -> None:
+        self.__model.open_steam(name)

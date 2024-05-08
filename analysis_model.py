@@ -7,6 +7,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 from dataframesaver import DataFrameSaver as Ds
+import webbrowser
 
 
 class Analysis:
@@ -70,10 +71,11 @@ class Analysis:
     def get_saved_name(self) -> list:
         return self.df.get_all_name()
 
-    def get_all_genres(self):
+    def get_all_genres(self) -> list:
         df = self.df.get_raw()
-        unique = np.unique([*itertools.chain.from_iterable(df['Genres'])])
-        return unique.tolist()
+        unique = [genre for row in df['Genres'].tolist() for genre in row.split(",")]
+        unique = set(unique)
+        return list(unique)
 
     def add_to_dataframe(self, content: (pd.Series, pd.DataFrame), name: str) -> None:
         """ Add specified content to named dataframe """
@@ -85,3 +87,17 @@ class Analysis:
     @staticmethod
     def get_non_numeric_columns():
         return ['Estimated owners', 'Windows', 'Mac', 'Linux', 'Genres']
+
+    def open_steamdb(self, name: str) -> None:
+        if name != '' and not name.isspace() and not None:
+            appid = self.get_specific(name)['AppID'].values[0]
+            webbrowser.open_new(f'https://steamdb.info/app/{appid}')
+        else:
+            webbrowser.open_new_tab('https://steamdb.info/')
+
+    def open_steam(self, name: str) -> None:
+        if name != '' and not name.isspace() and not None:
+            appid = self.get_specific(name)['AppID'].values[0]
+            webbrowser.open_new(f'https://store.steampowered.com/app/{appid}')
+        else:
+            webbrowser.open_new('https://store.steampowered.com/')
