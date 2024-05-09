@@ -1,4 +1,5 @@
-""" Analysis Controller Module for Analysis Application"""
+""" Analysis Controller Module for Analysis Application
+This module is responsible for invoke the function in model and return the data to the UI"""
 import pandas as pd
 from pandas import DataFrame
 from analysis_model import Analysis
@@ -14,6 +15,7 @@ class AnalysisController:
         return self.__model.df.df.copy()
 
     def get_raw(self):
+        """ Return the copy of raw dataframe """
         return self.__model.df.get_raw()
 
     def reset_df(self):
@@ -100,25 +102,33 @@ class AnalysisController:
         self.__model.add_to_dataframe(content, name)
 
     def get_filter_columns(self) -> dict:
+        """ return the dictionary containing the column names used for filtering or other operation"""
         return {'num': self.__model.get_num_column(), 'other': self.__model.get_non_numeric_columns()}
 
     def get_num_column(self) -> list:
+        """ return the list of the numerical columns """
         return self.__model.get_num_column()
 
     def get_non_numeric_columns(self) -> list:
+        """ return the list of non-numeric columns """
         return self.__model.get_non_numeric_columns()
 
-    def filter_str(self, col, filter_str):
-        return self.__model.filter_str(col, filter_str)
+    def filter_str(self, col, filter_str) -> None:
+        """ filter the dataframe column by given string """
+        self.__model.filter_str(col, filter_str)
 
-    def save_all(self):
+    def save_all(self) -> None:
+        """ save all dataframe to csv file in saved directory """
         self.__model.df.save_all_df()
 
     def get_unique_genres(self) -> list:
+        """ return list of unique genres inside dataframe"""
         return self.__model.get_all_genres()
 
     def visit_steamdb(self, appid: str = '') -> None:
+        """ visit steamdb.info site of specified app"""
         self.__model.open_steamdb(appid)
 
     def visit_steam(self, appid: str = '') -> None:
+        """ visit steam site of specified app"""
         self.__model.open_steam(appid)
