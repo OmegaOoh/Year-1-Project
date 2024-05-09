@@ -403,22 +403,27 @@ class AnalysisGUI(tk.Tk):
         df = self.analysis.get_df()
         match graph_type:
             case 'Histogram':
-                plot = self.plot_histogram(df, x, x, '')
+                title = 'Distribution of ' + x
+                plot = self.plot_histogram(df, x, x, 'frequency', title)
             case "Scatter":
                 if x == y:
                     tk.messagebox.showinfo("Invalid XY", "X and Y must be different")
                     return
-                plot = self.plot_scatter(df, x, y, x, y)
+                title = 'Scatter plot of ' + x + ' and ' + y
+                plot = self.plot_scatter(df, x, y, x, y, title)
             case "Pie":
-                plot = self.plot_pie(df, x)
+                title = 'Pie plot of ' + x
+                plot = self.plot_pie(df, x, title=title)
             case "Line":
                 x_col = 'Release date'
                 if x == 'count':
+                    title = "Number of " + y + ' Each year'
                     df = self.analysis.count_time()
-                    plot = self.plot_line(df, x_col, 'Name', x_col, y)
+                    plot = self.plot_line(df, x_col, 'Name', x_col, y, title=title)
                 elif x == 'average':
+                    title = "Average of " + y + ' Each year'
                     df = self.analysis.mean_time(y)
-                    plot = self.plot_line(df, x_col, y, x_col, y)
+                    plot = self.plot_line(df, x_col, y, x_col, y, title=title)
         figure = FigureCanvasTkAgg(plot, root)
         figure.draw()
         figure.get_tk_widget().grid(sticky=tk.NSEW, column=0, row=0)
@@ -613,7 +618,7 @@ class AnalysisGUI(tk.Tk):
         scroll.grid(sticky=tk.NSEW, column=2, row=1)
         self.__table.grid(sticky=tk.NSEW, column=0, row=1, columnspan=2)
 
-    def change_image(self, image_name: str, label: tk.Label) -> None:
+    def change_image(self, appid: str, label: tk.Label) -> None:
 
         q = Queue()
 
@@ -625,7 +630,7 @@ class AnalysisGUI(tk.Tk):
         label.image = None
 
         def load_img():
-            image = self.analysis.get_picture(image_name)
+            image = self.analysis.get_picture(appid)
             q.put(image)
 
         thread = threading.Thread(target=load_img)
@@ -678,16 +683,16 @@ class AnalysisGUI(tk.Tk):
         item_loc = self.__table.focus()
         item = self.__table.item(item_loc)
         try:
-            item_name = item['values'][1]
+            item_id = item['values'][0]
         except IndexError:
             return
-        self.change_image(item_name, self.__detail_comp['picture'])
-        details = self.analysis.get_specific(item_name)
+        self.change_image(item_id, self.__detail_comp['picture'])
+        details = self.analysis.get_specific(item_id)
 
         def get_detail(column: str) -> str:
             return details[column].values[0]
 
-        self.__detail_comp['selected'] = item_name
+        self.__detail_comp['selected'] = item_id
         self.__detail_comp['game title'].configure(text=get_detail('Name'))
         self.__detail_comp['price'].configure(text=f'{get_detail("Price"):,.2f} USD')
         self.__detail_comp['publisher'].configure(text=get_detail('Publishers'))
@@ -699,8 +704,8 @@ class AnalysisGUI(tk.Tk):
         self.__detail_comp['est_owner'].configure(text=get_detail('Estimated owners'))
         self.__detail_comp['steam'].unbind('<Button-1>')
         self.__detail_comp['steamdb'].unbind('<Button-1>')
-        self.__detail_comp['steam'].bind("<Button-1>", lambda x: self.analysis.visit_steam(get_detail('Name')))
-        self.__detail_comp['steamdb'].bind("<Button-1>", lambda x: self.analysis.visit_steamdb(get_detail('Name')))
+        self.__detail_comp['steam'].bind("<Button-1>", lambda x: self.analysis.visit_steam(item['values'][0]))
+        self.__detail_comp['steamdb'].bind("<Button-1>", lambda x: self.analysis.visit_steamdb(item['values'][0]))
 
         self.load_dataframe_name(self.__detail_comp['combobox'])
 
@@ -710,8 +715,8 @@ class AnalysisGUI(tk.Tk):
             tkinter.messagebox.showinfo('Warning', 'Dataframe name does not allowed, saved to untitled dataframe.')
             df_name = 'untitled'
         try:
-            item_name = self.__detail_comp['selected']
-            df = self.analysis.get_specific(item_name)
+            item_id = self.__detail_comp['selected']
+            df = self.analysis.get_specific(item_id)
             self.analysis.add_to_dataframe(df, df_name)
         except KeyError:
             return

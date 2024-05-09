@@ -55,17 +55,17 @@ class Analysis:
 
     def get_correlation(self, x, y) -> float:
         """ Calculate the correlation between 2 columns in dataframe"""
-        return self.df.df[x].corr(self.df.df[y])
+        with np.errstate(invalid='ignore'):
+            return self.df.df[x].corr(self.df.df[y])
 
-    def get_image(self, name: str) -> Image:
-        df = self.df.get_raw().copy()
-        url = df[(df['Name'] == name)]['Header image'].values[0]
+    def get_image(self, appid: str) -> Image:
+        url = self.get_specific(appid)['Header image'].values[0]
         response = requests.get(url)
         return Image.open(BytesIO(response.content))
 
-    def get_specific(self, name: str) -> pd.DataFrame:
+    def get_specific(self, appid: str) -> pd.DataFrame:
         df = self.df.get_raw().copy()
-        df = df.loc[df['Name'] == name]
+        df = df.loc[df['AppID'] == str(appid)]
         return df
 
     def get_saved_name(self) -> list:
@@ -88,16 +88,14 @@ class Analysis:
     def get_non_numeric_columns():
         return ['Estimated owners', 'Windows', 'Mac', 'Linux', 'Genres']
 
-    def open_steamdb(self, name: str) -> None:
-        if name != '' and not name.isspace() and not None:
-            appid = self.get_specific(name)['AppID'].values[0]
+    def open_steamdb(self, appid: str) -> None:
+        if int(appid) != '':
             webbrowser.open_new(f'https://steamdb.info/app/{appid}')
         else:
             webbrowser.open_new_tab('https://steamdb.info/')
 
-    def open_steam(self, name: str) -> None:
-        if name != '' and not name.isspace() and not None:
-            appid = self.get_specific(name)['AppID'].values[0]
+    def open_steam(self, appid: str) -> None:
+        if appid != '' and not appid.isspace() and not None:
             webbrowser.open_new(f'https://store.steampowered.com/app/{appid}')
         else:
             webbrowser.open_new('https://store.steampowered.com/')

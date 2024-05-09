@@ -81,14 +81,14 @@ class AnalysisController:
         """
         return self.__model.get_correlation(x, y)
 
-    def get_picture(self, name: str):
-        return self.__model.get_image(name)
+    def get_picture(self, appid: str):
+        return self.__model.get_image(appid)
 
-    def get_specific(self, name: str) -> pd.DataFrame:
+    def get_specific(self, appid: str) -> pd.DataFrame:
         """ return dictionary contains specific information about the given game
-        :param name: the name of video game
+        :param appid: the appid of video game
         :return : Dataframe containing 1 specific game information"""
-        return self.__model.get_specific(name)
+        return self.__model.get_specific(appid)
 
     def get_dataframes_name(self):
         return self.__model.get_saved_name()
@@ -117,8 +117,8 @@ class AnalysisController:
     def get_unique_genres(self) -> list:
         return self.__model.get_all_genres()
 
-    def visit_steamdb(self, name: str = '') -> None:
-        self.__model.open_steamdb(name)
+    def visit_steamdb(self, appid: str = '') -> None:
+        self.__model.open_steamdb(appid)
 
-    def visit_steam(self, name: str = '') -> None:
-        self.__model.open_steam(name)
+    def visit_steam(self, appid: str = '') -> None:
+        self.__model.open_steam(appid)
