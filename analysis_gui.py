@@ -116,11 +116,9 @@ class AnalysisGUI(tk.Tk):
             progress_bar.grid_forget()
 
         filter_data()
-        corr = self.analysis.get_correlation('Price', 'Rating')
         temp_df = self.analysis.get_df()
         scatter_fig = self.plot_scatter(temp_df, "Price", "Rating",
-                                        "Price", "Rating", f"Scatter of Price and Rating \n"
-                                        f"Correlation: {corr:.5f}")
+                                        "Price", "Rating", f"Scatter of Price and Rating")
         scatter_cv = FigureCanvasTkAgg(scatter_fig, root)
         scatter_cv.draw()
         scatter_cv.get_tk_widget().grid(sticky=tk.NSEW, column=2, row=0)
@@ -137,7 +135,7 @@ class AnalysisGUI(tk.Tk):
         rating_desc.grid(sticky=tk.NSEW, column=1, row=0)
 
         # Ratio of Game Genres (Pie Charts)
-        def filter_df():
+        def filter_df2():
             self.analysis.reset_df()
             self.analysis.to_list('Genres')
             self.analysis.apply('Primary Genres', lambda x: x['Genres'][0], axis=1)
@@ -145,7 +143,7 @@ class AnalysisGUI(tk.Tk):
         def filter_data():
             progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL, mode='indeterminate')
             progress_bar.grid(sticky=tk.NSEW, row=0, column=1)
-            thread = threading.Thread(target=filter_df)
+            thread = threading.Thread(target=filter_df2)
             thread.start()
             progress_bar.start()
             while thread.is_alive():
@@ -801,15 +799,16 @@ class AnalysisGUI(tk.Tk):
             plt.hist(df[x_column], range=(lower_bound, upper_bound))
         return fig
 
-    @staticmethod
-    def plot_scatter(df, x_column: str, y_column: str, x_label: str, y_label: str,
+    def plot_scatter(self, df, x_column: str, y_column: str, x_label: str, y_label: str,
                      title: str = 'Scatter Plot') -> Figure:
         """ Plot the scatter plot of the data """
         fig, ax = plt.subplots(figsize=(10, 6))
         plt.scatter(df[x_column], df[y_column])
-        ax.set_title(title)
+        corr = self.analysis.get_correlation(x_column, y_column)
+        ax.set_title(title + f"\n Correlation: {corr:.5f}")
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
+
         return fig
 
     @staticmethod
