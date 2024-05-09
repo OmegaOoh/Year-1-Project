@@ -1,4 +1,5 @@
-""" GUI module for analysis application"""
+""" GUI module for analysis application
+this module used for GUI part of the application"""
 
 import threading
 from queue import Queue
@@ -337,10 +338,12 @@ class AnalysisGUI(tk.Tk):
         root.rowconfigure(0, weight=1)
 
     def handle_change_graph_type(self, e: tk.Event) -> None:
+        """ Handle the change of the graph type event from combobox"""
         selected = e.widget.get()
         self.select_graph_type(selected)
 
     def select_graph_type(self, selected):
+        """ Set the values and state of data combobox corresponding to the selected graph type"""
         match selected:
             case 'Histogram':
                 self.__explore_comp['data1']['value'] = self.analysis.get_num_column()
@@ -363,6 +366,7 @@ class AnalysisGUI(tk.Tk):
 
     def handle_visualize(self, x: str = 'Price', y: str = 'Positive',
                          graph_type: str = 'Histogram', filter_list: list = None):
+        """ Handle the visualization of the data (Button Pressed)"""
         try:
             fig = self.__explore_comp['figure']
             fig.get_tk_widget().grid_forget()
@@ -378,6 +382,7 @@ class AnalysisGUI(tk.Tk):
         root = self.__explore_comp['plot']
 
         def filter_df():
+            """ Thread Worker for filtering data"""
             for i in filter_list:
                 i = i.split(' ')
                 expression = i[1] + " " + i[2].replace('_', ' ')
@@ -387,6 +392,7 @@ class AnalysisGUI(tk.Tk):
                     self.analysis.filter(i[0].replace('_', ' '), expression)
 
         def filter_data():
+            """ Tracking of the data filtering progress (long running task)"""
             progress_bar = ttk.Progressbar(root, orient=tk.VERTICAL,
                                            mode='indeterminate')
             progress_bar.grid(sticky=tk.NSEW, row=0, column=0)
@@ -430,6 +436,7 @@ class AnalysisGUI(tk.Tk):
         self.__explore_comp['figure'] = figure
 
     def handle_tab_change(self, event: tk.Event):
+        """ Handle the event of tab changing (tkinter notebook) """
         i = self.notebook.index(self.notebook.select())
         if i == 1:
             # Update dataframe combobox each time the user select the explore tabs
@@ -438,11 +445,13 @@ class AnalysisGUI(tk.Tk):
             combobox['values'] = ['full'] + list(combobox['values'])
 
     def handle_filter_change(self, event: tk.Event):
+        """ Handle the event of changing the filter condition"""
         widget = event.widget
         selected = widget.get()
         self.select_filter(selected)
 
     def select_filter(self, selected):
+        """ Change the list for filter condition corresponding to selected attributes"""
         self.analysis.reset_df()
         full_dict = self.analysis.get_filter_columns()
         cbb = self.__explore_comp['condition1']
@@ -463,6 +472,7 @@ class AnalysisGUI(tk.Tk):
                 q = Queue()
 
                 def get_genres():
+                    """ Get all unique genres in the dataframe"""
                     g = self.analysis.get_unique_genres()
                     q.put(g)
 
@@ -473,6 +483,7 @@ class AnalysisGUI(tk.Tk):
                 progressbar.start()
 
                 def wait():
+                    """ Wait for getting genres"""
                     if not thread.is_alive():
                         return
                     self.update()
@@ -619,7 +630,7 @@ class AnalysisGUI(tk.Tk):
         self.__table.grid(sticky=tk.NSEW, column=0, row=1, columnspan=2)
 
     def change_image(self, appid: str, label: tk.Label) -> None:
-
+        """ Change the image of the single data(app) """
         q = Queue()
 
         try:
@@ -630,6 +641,7 @@ class AnalysisGUI(tk.Tk):
         label.image = None
 
         def load_img():
+            """ Thread worker function """
             image = self.analysis.get_picture(appid)
             q.put(image)
 
@@ -637,6 +649,7 @@ class AnalysisGUI(tk.Tk):
         thread.start()
 
         def wait_process(i):
+            """ Wait for process of loading image to be done"""
             ls = ['...', '..', '.']
             if not thread.is_alive():
                 return
@@ -677,6 +690,7 @@ class AnalysisGUI(tk.Tk):
         self.__detail_comp['image'] = resized
 
     def handle_select_game(self, *args):
+        """ Handle the event when user selects a game/application from treeview"""
         self.__detail_comp['button']['state'] = tk.NORMAL
         self.__detail_comp['combobox']['state'] = tk.NORMAL
 
@@ -710,6 +724,7 @@ class AnalysisGUI(tk.Tk):
         self.load_dataframe_name(self.__detail_comp['combobox'])
 
     def handle_adds_button(self, *args):
+        """ Handle the adds to dataframe button"""
         df_name = str(self.__detail_comp['combobox'].get())
         if df_name.isspace() or df_name == '' or df_name == 'full':
             tkinter.messagebox.showinfo('Warning', 'Dataframe name does not allowed, saved to untitled dataframe.')
@@ -722,10 +737,12 @@ class AnalysisGUI(tk.Tk):
             return
 
     def load_dataframe_name(self, combobox):
+        """ Load the dataframe name from the dataframesaver"""
         ls = self.analysis.get_dataframes_name()
         combobox['values'] = ls
 
     def handle_search(self):
+        """ Handle the search functionality"""
         search_q = self.__query.get()
         if not search_q.isspace() and search_q != '':
             q = Queue()
@@ -749,9 +766,11 @@ class AnalysisGUI(tk.Tk):
             self.load_table(q.get())
 
     def load_table(self, dataframe):
+        """ Insert all the data into the treeview"""
         q = Queue()
 
         def data_prep(df, que: Queue):
+            """ Thread worker to prepare data to add into the treeview"""
             df = df[['AppID', 'Name']]
             for i, r in df.iterrows():
                 data = (i, list(r))
@@ -762,6 +781,7 @@ class AnalysisGUI(tk.Tk):
         self.clear_table()
 
         def update_table():
+            """ Update the treeview according to queue"""
             if not q.empty():
                 for _ in range(1000):
                     if q.empty():
@@ -775,11 +795,13 @@ class AnalysisGUI(tk.Tk):
         update_table()
 
     def clear_table(self):
+        """ Clear treeview table"""
         self.__table.delete(*self.__table.get_children())
 
     @staticmethod
     def plot_histogram(df, x_column: str, x_label: str, y_label: str,
                        title: str = 'Histogram', bins: int = None) -> Figure:
+        """ Plot histogram according to input """
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.set_title(title)
         ax.set_xlabel(x_label)
