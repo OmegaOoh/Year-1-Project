@@ -6,7 +6,8 @@
 
 ## Requires Packages
 ###### same as requirement.txt
-- matplotlib >= 3.8.4
-- pandas >= 2.2.2
-- Pillow >= 10.3.0
-- Requests >= 2.31.0
+- matplotlib>=3.8.4
+- numpy>=1.26.4
+- pandas>=2.2.2
+- Pillow>=10.3.0
+- Requests>=2.31.0
