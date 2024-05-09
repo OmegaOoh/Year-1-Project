@@ -1,10 +1,12 @@
-import glob
+""" Module for save, load and process dataframes (only small/ essential operation)"""
 
+import glob
 import pandas as pd
 import os
 
 
 class DataFrameSaver:
+    """ Class to save, load, and process the dataframes"""
     def __init__(self, filename: str):
         self.__raw_df = pd.read_csv(filename)
         self.__raw_df['AppID'] = self.__raw_df['AppID'].astype(str)
@@ -16,9 +18,11 @@ class DataFrameSaver:
         self.read_saved_df()
 
     def to_datetime(self):
+        """ Convert release data attribute to datetime object"""
         self.df['Release date'] = self.df['Release date'].apply(lambda x: to_datetime(x))
 
     def to_list(self, col: str):
+        """ convert specified column to list"""
         self.df[col] = self.df.apply(lambda x: x[col].split(','), axis=1)
 
     def save_df(self, name: str):
@@ -54,6 +58,7 @@ class DataFrameSaver:
             self.__saved_df[name] = pd.DataFrame(content)
 
     def read_saved_df(self) -> None:
+        """ Read saved dataframe from saved file"""
         try:
             os.chdir('saved')
         except FileNotFoundError:
@@ -67,6 +72,7 @@ class DataFrameSaver:
         os.chdir('../')
 
     def save_all_df(self):
+        """ Saves dataframe to saved file"""
         try:
             os.chdir('saved')
         except FileNotFoundError:
@@ -78,6 +84,7 @@ class DataFrameSaver:
 
 
 def to_datetime(date_str):
+    """ Change the dataformat of date_str to datetime object"""
     try:
         date_str = pd.to_datetime(date_str, format="%b %d, %Y")
     except ValueError:
