@@ -1,13 +1,15 @@
-""" Analysis model for all most operation in GUI application"""
-import itertools
+""" Analysis model for all most operation in GUI application
+this module handle most of the operation related to the data"""
 
+
+from io import BytesIO
+import webbrowser
+import requests
 import numpy as np
 import pandas as pd
 from PIL import Image
-import requests
-from io import BytesIO
 from dataframesaver import DataFrameSaver as Ds
-import webbrowser
+
 
 
 class Analysis:
@@ -59,19 +61,23 @@ class Analysis:
             return self.df.df[x].corr(self.df.df[y])
 
     def get_image(self, appid: str) -> Image:
+        """ Get image from appid (url from dataframe) and return Image object"""
         url = self.get_specific(appid)['Header image'].values[0]
-        response = requests.get(url)
+        response = requests.get(url, timeout=2000)
         return Image.open(BytesIO(response.content))
 
     def get_specific(self, appid: str) -> pd.DataFrame:
+        """ Get specific rows in dataframe based on appid and return the dataframe"""
         df = self.df.get_raw().copy()
         df = df.loc[df['AppID'] == str(appid)]
         return df
 
     def get_saved_name(self) -> list:
+        """ Get all of saved dataframe name"""
         return self.df.get_all_name()
 
     def get_all_genres(self) -> list:
+        """ Get all unique genres of app in the dataframe"""
         df = self.df.get_raw()
         unique = [genre for row in df['Genres'].tolist() for genre in row.split(",")]
         unique = set(unique)
@@ -82,14 +88,17 @@ class Analysis:
         self.df.add_to_saved_df(content, name)
 
     def get_num_column(self):
+        """ Get numerical column"""
         return self.df.get_raw().select_dtypes(include='number').columns.to_list()
 
     @staticmethod
     def get_non_numeric_columns():
+        """ Get non-numeric columns (hardcoded)"""
         return ['Estimated owners', 'Windows', 'Mac', 'Linux', 'Genres']
 
     @staticmethod
     def open_steamdb(appid: str) -> None:
+        """ Open steamdb site on user browser"""
         if int(appid) != '':
             webbrowser.open_new(f'https://steamdb.info/app/{appid}')
         else:
@@ -97,6 +106,7 @@ class Analysis:
 
     @staticmethod
     def open_steam(appid: str) -> None:
+        """ Open steam site on user browser"""
         if int(appid) != '':
             webbrowser.open_new(f'https://store.steampowered.com/app/{appid}')
         else:
