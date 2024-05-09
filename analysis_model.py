@@ -88,14 +88,16 @@ class Analysis:
     def get_non_numeric_columns():
         return ['Estimated owners', 'Windows', 'Mac', 'Linux', 'Genres']
 
-    def open_steamdb(self, appid: str) -> None:
+    @staticmethod
+    def open_steamdb(appid: str) -> None:
         if int(appid) != '':
             webbrowser.open_new(f'https://steamdb.info/app/{appid}')
         else:
             webbrowser.open_new_tab('https://steamdb.info/')
 
-    def open_steam(self, appid: str) -> None:
-        if appid != '' and not appid.isspace() and not None:
+    @staticmethod
+    def open_steam(appid: str) -> None:
+        if int(appid) != '':
             webbrowser.open_new(f'https://store.steampowered.com/app/{appid}')
         else:
             webbrowser.open_new('https://store.steampowered.com/')
