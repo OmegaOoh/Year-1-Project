@@ -1,6 +1,7 @@
 """ Analysis Controller Module for Analysis Application
 This module is responsible for invoke the function in model and return the data to the UI"""
 import pandas as pd
+from matplotlib.figure import Figure
 from pandas import DataFrame
 from analysis_model import Analysis
 
@@ -49,7 +50,7 @@ class AnalysisController:
         """
         return self.__model.to_timeseries_mean(interval, column)
 
-    def apply(self, target_column: str, function, axis=0) ->None:
+    def apply(self, target_column: str, function, axis=0) -> None:
         """ Apply the given function to the source column and apply the result to target columns
         :param target_column: name of the to save the results to
         :param axis: axis to apply the function to (0 for rows(default), 1 for columns)
@@ -65,7 +66,7 @@ class AnalysisController:
         """
         self.__model.filter(column, expression)
 
-    def search(self,query: str) -> pd.DataFrame:
+    def search(self, query: str) -> pd.DataFrame:
         """ Search the data inside entire dataframe, by query
         :param query: the query to search (AppID, Name)
         :return DataFrame: dataframe of search results"""
@@ -75,7 +76,7 @@ class AnalysisController:
         """ Converts data in specified columns to list of strings """
         self.__model.df.to_list(column)
 
-    def get_correlation(self, x:str, y:str):
+    def get_correlation(self, x: str, y: str):
         """ Calculates the correlation with the given x and y column
         :param x : columns name x
         :param y : columns name y
@@ -132,3 +133,23 @@ class AnalysisController:
     def visit_steam(self, appid: str = '') -> None:
         """ visit steam site of specified app"""
         self.__model.open_steam(appid)
+
+    def plot_histogram(self, df: DataFrame, x_column: str, x_label: str, y_label: str,
+                       title: str = 'Histogram', bins: int = None) -> Figure:
+        """ Plot histogram according to input """
+        return self.__model.plot_histogram(df, x_column, x_label, y_label, title, bins)
+
+    def plot_scatter(self, df: DataFrame, x_column: str, y_column: str, x_label: str, y_label: str,
+                     title: str = 'Scatter Plot') -> Figure:
+        """ Plot the scatter plot of the data """
+        return self.__model.plot_scatter(df, x_column, y_column, x_label, y_label, title)
+
+    def plot_line(self, df: DataFrame, x_column: str, y_column: str, x_label: str, y_label: str,
+                  title: str = 'Line Plot') -> Figure:
+        """ Plot the line plot of the data """
+        return self.__model.plot_line(df, x_column, y_column, x_label, y_label, title)
+
+    def plot_pie(self, df: DataFrame, x_column: str,
+                 title: str = 'Pie Plot') -> Figure:
+        """ Plot the pie plot of the data """
+        return self.__model.plot_pie(df, x_column, title)

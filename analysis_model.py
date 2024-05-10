@@ -8,8 +8,9 @@ import requests
 import numpy as np
 import pandas as pd
 from PIL import Image
+from matplotlib.figure import Figure
 from dataframesaver import DataFrameSaver as Ds
-
+from matplotlib import pyplot as plt
 
 
 class Analysis:
@@ -39,13 +40,13 @@ class Analysis:
         """ Apply the given function to the dataframe column"""
         self.df.df[target_column] = self.df.df.apply(function, axis=axis)
 
-    def filter(self, column:str, expression: str):
+    def filter(self, column: str, expression: str):
         """ Filter and change dataframe to have only data that satisfied expression"""
         df = self.df.df
         df2 = df[eval(f"df['{column}']{expression}")]
         self.df.df = df2
 
-    def filter_str(self, column:str, expression: str):
+    def filter_str(self, column: str, expression: str):
         """ Filter and change dataframe to have only data that satisfied expression"""
         self.df.df = self.df.df[self.df.df[column].astype(str).str.contains(expression, case=False)]
 
@@ -71,6 +72,78 @@ class Analysis:
         df = self.df.get_raw().copy()
         df = df.loc[df['AppID'] == str(appid)]
         return df
+
+    @staticmethod
+    def plot_histogram(df, x_column: str, x_label: str, y_label: str,
+                       title: str = 'Histogram', bins: int = None) -> Figure:
+        """ Plot histogram according to input """
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.set_title(title)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        # Remove using SD
+        data = df[x_column]
+        q1 = data.quantile(0.25)
+        q3 = data.quantile(0.75)
+        iqr = q3 - q1
+        upper_bound = q3 + 1.5 * iqr
+        if data.max() < upper_bound:
+            upper_bound = data.max()
+        lower_bound = q1 - 1.5 * iqr
+        if data.min() > lower_bound:
+            lower_bound = data.min()
+        # plot a graph
+        if not bins:
+            bins = (upper_bound - lower_bound) / 2
+        if bins >= 1:
+            plt.hist(df[x_column], bins=bins.__ceil__(), range=(lower_bound, upper_bound))
+        else:
+            plt.hist(df[x_column], range=(lower_bound, upper_bound))
+        return fig
+
+    def plot_scatter(self, df, x_column: str, y_column: str, x_label: str, y_label: str,
+                     title: str = 'Scatter Plot') -> Figure:
+        """ Plot the scatter plot of the data """
+        fig, ax = plt.subplots(figsize=(10, 6))
+        plt.scatter(df[x_column], df[y_column])
+        corr = self.get_correlation(x_column, y_column)
+        ax.set_title(title + f"\n Correlation: {corr:.5f}")
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+
+        return fig
+
+    @staticmethod
+    def plot_line(df, x_column: str, y_column: str, x_label: str, y_label: str,
+                  title: str = 'Line Plot') -> Figure:
+        """ Plot the line plot of the data """
+        fig, ax = plt.subplots(figsize=(10, 6))
+        plt.plot(df[x_column], df[y_column])
+        ax.set_title(title)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        return fig
+
+    @staticmethod
+    def plot_pie(df, x_column: str,
+                 title: str = 'Pie Plot') -> Figure:
+        """ Plot the pie plot of the data """
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        n_df = df.groupby(df[x_column]).count().reset_index()
+
+        def assign_others(x):
+            """ Combine the values that below 5% of total to "Others"""
+            if x['Name'] < 0.015 * n_df['Name'].sum():
+                return 'Other'
+            return str(x[x_column])
+
+        n_df[x_column] = n_df.apply(assign_others, axis=1)
+        n_df = n_df.groupby(n_df[x_column]).sum()
+        data = n_df['Name'].to_numpy()
+        plt.pie(data, labels=n_df.index, autopct='%1.1f%%')
+        ax.set_title(title)
+        return fig
 
     def get_saved_name(self) -> list:
         """ Get all of saved dataframe name"""

@@ -7,7 +7,6 @@ import tkinter as tk
 import tkinter.messagebox
 from tkinter import ttk, font
 from PIL import ImageTk
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from analysis_controller import AnalysisController
@@ -77,9 +76,9 @@ class AnalysisGUI(tk.Tk):
         descriptive_frame = tk.LabelFrame(root, text='Descriptive Statistic', font='32')
 
         # Distribution of Games Price (histogram)
-        price_fig = self.plot_histogram(self.analysis.get_df(), 'Price',
-                                        'Price', 'Number of video games',
-                                        'Distribution of Video Games Prices')
+        price_fig = self.analysis.plot_histogram(self.analysis.get_df(), 'Price',
+                                                 'Price', 'Number of video games',
+                                                 'Distribution of Video Games Prices')
         dist_price_cv = FigureCanvasTkAgg(price_fig, root)
         dist_price_cv.draw()
         dist_price_cv.get_tk_widget().grid(sticky=tk.NSEW, column=0, row=0)
@@ -91,8 +90,8 @@ class AnalysisGUI(tk.Tk):
         # Game release each year (line graph)
         self.analysis.to_datetime()
         temp_df = self.analysis.count_time('YE')
-        price_y_fig = self.plot_line(temp_df, "Release date", "Name",
-                                     'Release Date', "Number of Video Games", "Game release each Year")
+        price_y_fig = self.analysis.plot_line(temp_df, "Release date", "Name",
+                                              'Release Date', "Number of Video Games", "Game release each Year")
         price_y_cv = FigureCanvasTkAgg(price_y_fig, root)
         price_y_cv.draw()
         price_y_cv.get_tk_widget().grid(sticky=tk.NSEW, column=1, row=0)
@@ -118,15 +117,15 @@ class AnalysisGUI(tk.Tk):
 
         filter_data()
         temp_df = self.analysis.get_df()
-        scatter_fig = self.plot_scatter(temp_df, "Price", "Rating",
-                                        "Price", "Rating", f"Scatter of Price and Rating")
+        scatter_fig = self.analysis.plot_scatter(temp_df, "Price", "Rating",
+                                                 "Price", "Rating", f"Scatter of Price and Rating")
         scatter_cv = FigureCanvasTkAgg(scatter_fig, root)
         scatter_cv.draw()
         scatter_cv.get_tk_widget().grid(sticky=tk.NSEW, column=2, row=0)
 
         # Rating Dist
-        rate_dist_fig = self.plot_histogram(self.analysis.get_df(), 'Rating', 'Rating',
-                                            'Number of Video Game', 'Distribution of Game Rating')
+        rate_dist_fig = self.analysis.plot_histogram(self.analysis.get_df(), 'Rating', 'Rating',
+                                                     'Number of Video Game', 'Distribution of Game Rating')
         rate_dist_cv = FigureCanvasTkAgg(rate_dist_fig, root)
         rate_dist_cv.draw()
         rate_dist_cv.get_tk_widget().grid(sticky=tk.NSEW, column=1, row=1)
@@ -154,8 +153,8 @@ class AnalysisGUI(tk.Tk):
 
         filter_data()
 
-        pie_fig = self.plot_pie(self.analysis.get_df(), "Primary Genres",
-                                "Ratio of each primary genres")
+        pie_fig = self.analysis.plot_pie(self.analysis.get_df(), "Primary Genres",
+                                         "Ratio of each primary genres")
         pie_cv = FigureCanvasTkAgg(pie_fig, root)
         pie_cv.draw()
         pie_cv.get_tk_widget().grid(sticky=tk.NSEW, column=0, row=1)
@@ -410,26 +409,26 @@ class AnalysisGUI(tk.Tk):
         match graph_type:
             case 'Histogram':
                 title = 'Distribution of ' + x
-                plot = self.plot_histogram(df, x, x, 'frequency', title)
+                plot = self.analysis.plot_histogram(df, x, x, 'frequency', title)
             case "Scatter":
                 if x == y:
                     tk.messagebox.showinfo("Invalid XY", "X and Y must be different")
                     return
                 title = 'Scatter plot of ' + x + ' and ' + y
-                plot = self.plot_scatter(df, x, y, x, y, title)
+                plot = self.analysis.plot_scatter(df, x, y, x, y, title)
             case "Pie":
                 title = 'Pie plot of ' + x
-                plot = self.plot_pie(df, x, title=title)
+                plot = self.analysis.plot_pie(df, x, title=title)
             case "Line":
                 x_col = 'Release date'
                 if x == 'count':
                     title = "Number of " + y + ' Each year'
                     df = self.analysis.count_time()
-                    plot = self.plot_line(df, x_col, 'Name', x_col, y, title=title)
+                    plot = self.analysis.plot_line(df, x_col, 'Name', x_col, y, title=title)
                 elif x == 'average':
                     title = "Average of " + y + ' Each year'
                     df = self.analysis.mean_time(y)
-                    plot = self.plot_line(df, x_col, y, x_col, y, title=title)
+                    plot = self.analysis.plot_line(df, x_col, y, x_col, y, title=title)
         figure = FigureCanvasTkAgg(plot, root)
         figure.draw()
         figure.get_tk_widget().grid(sticky=tk.NSEW, column=0, row=0)
@@ -506,7 +505,7 @@ class AnalysisGUI(tk.Tk):
                 cbb['state'] = tk.NORMAL
             cbb.current(0)
 
-    def __create_detail(self, root):
+    def __create_detail(self, root: tk.Frame):
         """ Create the frame to display the game details """
         picture_frame = tk.Frame(root)
         pic_label = tk.Label(picture_frame)
@@ -557,7 +556,7 @@ class AnalysisGUI(tk.Tk):
         self.__detail_comp['steamdb'] = steamdb
 
         steam = tk.Label(root, text="Visit Steam Store", fg='blue', cursor='hand2')
-        steam.bind("<Button-1>",lambda x: self.analysis.visit_steam())
+        steam.bind("<Button-1>", lambda x: self.analysis.visit_steam())
         self.__detail_comp['steam'] = steam
 
         add_to_label = tk.Label(root, text="Add to :")
@@ -602,7 +601,7 @@ class AnalysisGUI(tk.Tk):
         for i in range(5):
             root.columnconfigure(i, weight=1)
 
-    def __create_table_searchbar(self, root):
+    def __create_table_searchbar(self, root: tk.Frame):
         """ Create the search bar and table component that attach to root frame"""
         scroll = tk.Scrollbar(root, orient='vertical')
         self.__table = ttk.Treeview(root, yscrollcommand=scroll.set)
@@ -797,78 +796,6 @@ class AnalysisGUI(tk.Tk):
     def clear_table(self):
         """ Clear treeview table"""
         self.__table.delete(*self.__table.get_children())
-
-    @staticmethod
-    def plot_histogram(df, x_column: str, x_label: str, y_label: str,
-                       title: str = 'Histogram', bins: int = None) -> Figure:
-        """ Plot histogram according to input """
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.set_title(title)
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
-        # Remove using SD
-        data = df[x_column]
-        q1 = data.quantile(0.25)
-        q3 = data.quantile(0.75)
-        iqr = q3 - q1
-        upper_bound = q3 + 1.5 * iqr
-        if data.max() < upper_bound:
-            upper_bound = data.max()
-        lower_bound = q1 - 1.5 * iqr
-        if data.min() > lower_bound:
-            lower_bound = data.min()
-        # plot a graph
-        if not bins:
-            bins = (upper_bound - lower_bound) / 2
-        if bins >= 1:
-            plt.hist(df[x_column], bins=bins.__ceil__(), range=(lower_bound, upper_bound))
-        else:
-            plt.hist(df[x_column], range=(lower_bound, upper_bound))
-        return fig
-
-    def plot_scatter(self, df, x_column: str, y_column: str, x_label: str, y_label: str,
-                     title: str = 'Scatter Plot') -> Figure:
-        """ Plot the scatter plot of the data """
-        fig, ax = plt.subplots(figsize=(10, 6))
-        plt.scatter(df[x_column], df[y_column])
-        corr = self.analysis.get_correlation(x_column, y_column)
-        ax.set_title(title + f"\n Correlation: {corr:.5f}")
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
-
-        return fig
-
-    @staticmethod
-    def plot_line(df, x_column: str, y_column: str, x_label: str, y_label: str,
-                  title: str = 'Line Plot') -> Figure:
-        """ Plot the line plot of the data """
-        fig, ax = plt.subplots(figsize=(10, 6))
-        plt.plot(df[x_column], df[y_column])
-        ax.set_title(title)
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
-        return fig
-
-    @staticmethod
-    def plot_pie(df, x_column: str,
-                 title: str = 'Pie Plot') -> Figure:
-        """ Plot the pie plot of the data """
-
-        fig, ax = plt.subplots(figsize=(10, 6))
-        n_df = df.groupby(df[x_column]).count().reset_index()
-
-        def assign_others(x):
-            """ Combine the values that below 5% of total to "Others"""
-            if x['Name'] < 0.015 * n_df['Name'].sum():
-                return 'Other'
-            return str(x[x_column])
-
-        n_df[x_column] = n_df.apply(assign_others, axis=1)
-        n_df = n_df.groupby(n_df[x_column]).sum()
-        data = n_df['Name'].to_numpy()
-        plt.pie(data, labels=n_df.index, autopct='%1.1f%%')
-        ax.set_title(title)
-        return fig
 
     def get_descriptive_statistic(self, root, col: str) -> tk.LabelFrame:
         """ Create a label frame of the descriptive statistics """
