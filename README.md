@@ -49,7 +49,6 @@ the application's graphical user interface (GUI) on specific operating systems.
 ### UML Class Diagram
 
 ![UML class Diagram](uml.png "UML class Diagram")
-
 ### Sequence Diagram
 
 ![UML Sequence Diagram](sequence_diagram.png)
@@ -61,3 +60,14 @@ The data used in this application originates from the Steam Games Dataset on Kag
 <br> The dataset is licensed under the MIT License (see [THIRD-PARTY-LICENSE](THIRD-PARTY-LICENSE) for details).
 
 ----
+
+## Application Detail
+### Information Page
+![Information Page](screenshots/information_page.png)
+This page consist the datastory telling part.
+### Explore Page
+![Explore Page](screenshots/explore_page.png)
+Page allow user to change the attribute of the graph and filter by themselves.
+### Single Data Page
+![Single Data Page](screenshots/singledata_page.png)
+Let User read the data of the specified videos game and add the specific game to the dataframe.
