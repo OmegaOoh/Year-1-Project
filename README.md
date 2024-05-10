@@ -68,6 +68,14 @@ This page consist the datastory telling part.
 ### Explore Page
 ![Explore Page](screenshots/explore_page.png)
 Page allow user to change the attribute of the graph and filter by themselves.
+* Select the dataframe you want to visualize
+* Filter the data by using the set of filter condition in the combobox
+* Select the Graph type and its attribute
+* Press Visualize button
+  
 ### Single Data Page
 ![Single Data Page](screenshots/singledata_page.png)
 Let User read the data of the specified videos game and add the specific game to the dataframe.
+* Select specific games
+* Add the dataframe name to the buttom combobox
+* Press add button to add the video game into the new dataframe
