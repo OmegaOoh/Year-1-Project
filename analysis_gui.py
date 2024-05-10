@@ -180,7 +180,9 @@ class AnalysisGUI(tk.Tk):
         dataframe_combobox.current(0)
         dataframe_combobox['state'] = 'readonly'
         self.__explore_comp['df'] = dataframe_combobox
-        dataframe_combobox.grid(sticky=tk.EW, padx=5, pady=5, column=0, row=0)
+        label = tk.Label(filter_area, text="Target Dataframe: ")
+        label.grid(sticky=tk.W, padx=5, pady=5, column=0, row=0)
+        dataframe_combobox.grid(sticky=tk.EW, padx=5, pady=5, column=1, row=0)
 
         filter_data = tk.LabelFrame(filter_area, text="Data filter Condition")
         cond_cbb1 = ttk.Combobox(filter_data, state='readonly')
@@ -559,7 +561,7 @@ class AnalysisGUI(tk.Tk):
         steam.bind("<Button-1>", lambda x: self.analysis.visit_steam())
         self.__detail_comp['steam'] = steam
 
-        add_to_label = tk.Label(root, text="Add to :")
+        add_to_label = tk.Label(root, text="Add to dataframe:")
         add_combobox = ttk.Combobox(root)
         self.__detail_comp['combobox'] = add_combobox
         add_button = ttk.Button(root, text="Add")
@@ -763,6 +765,8 @@ class AnalysisGUI(tk.Tk):
             wait()
             thread.join()
             self.load_table(q.get())
+        else:
+            self.load_table(self.analysis.get_raw())
 
     def load_table(self, dataframe):
         """ Insert all the data into the treeview"""
