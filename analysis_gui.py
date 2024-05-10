@@ -16,10 +16,10 @@ plt.switch_backend('tkAgg')
 class AnalysisGUI(tk.Tk):
     """ GUI class for analysis application"""
 
-    def __init__(self):
+    def __init__(self, csv_name):
         super().__init__()
         # Controller
-        self.analysis = AnalysisController()
+        self.analysis = AnalysisController(csv_name)
         # Main GUI
         self.title('Steam Game Market Analysis')
         self.notebook = ttk.Notebook(self)

@@ -15,8 +15,8 @@ from matplotlib import pyplot as plt
 
 class Analysis:
     """ Analysis model for all operation in GUI application"""
-    def __init__(self):
-        self.df = Ds('game_market_data.csv')
+    def __init__(self, csv_name):
+        self.df = Ds(csv_name)
 
     def to_timeseries_count(self, interval: str) -> pd.DataFrame:
         """ returns dataframe that contains count of given column grouped by release date"""

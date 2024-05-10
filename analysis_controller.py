@@ -8,8 +8,8 @@ from analysis_model import Analysis
 
 class AnalysisController:
     """ Controller for analysis application"""
-    def __init__(self):
-        self.__model = Analysis()
+    def __init__(self, csv_name):
+        self.__model = Analysis(csv_name)
 
     def get_df(self) -> DataFrame:
         """ Return copy of dataframe"""
